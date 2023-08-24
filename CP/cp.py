@@ -1,16 +1,23 @@
 from minizinc import Instance, Model, Solver
 import numpy as np
 
-model = Model('cp.mzn')
-model.add_file('cp.dzn')
+from converter import convert, generate_dzn
 
-gecode = Solver.lookup("gecode")
+m, n, l, p, d = convert('inst01.txt')
+generate_dzn('cp_test.dzn', m, n, l, p, d)
 
-instance = Instance(gecode, model)
-#instance["n"] = 4
+quit(0)
 
-result = instance.solve()
-x = np.array(result["x"])
-y = np.array(result["y"])
-u = np.array(result["u"])
-print(result)
+# model = Model('cp.mzn')
+# model.add_file('cp.dzn')
+#
+# gecode = Solver.lookup("gecode")
+#
+# instance = Instance(gecode, model)
+# # instance["n"] = 4
+#
+# result = instance.solve()
+# x = np.array(result["x"])
+# y = np.array(result["y"])
+# u = np.array(result["u"])
+# print(result)
