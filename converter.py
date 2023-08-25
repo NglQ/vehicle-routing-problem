@@ -23,7 +23,7 @@ def convert(filename: str) -> tuple:
     return m, n, l, p, d
 
 
-def generate_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list):
+def generate_cp_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list):
     n_nodes = len(p)
     e = n_nodes * (n_nodes + 1)
     depot_1 = n_nodes + 1    # outgoing edges
@@ -48,3 +48,20 @@ def generate_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list
         f.write('from = %s;\n' % str(_from))
         f.write('to = %s;\n' % str(_to))
         f.write('w = %s;\n' % str(w))
+
+    return indexes
+
+
+def generate_ilp_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list):
+    with open(output_filename, 'w') as f:
+        f.write('m = %d;\n' % m)
+        f.write('n = %d;\n' % n)
+        f.write('l = %s;\n' % str(l))
+        f.write('w = %s;\n' % str(p))
+
+        matrix = '[|\n'
+        for i in range(n + 1):
+            matrix += '\t' + str(d[i])[1:-1] + ' |\n'
+        matrix = matrix[:-1] + ']'
+
+        f.write('D = %s;\n' % matrix)
