@@ -1,7 +1,9 @@
 import z3
 
-# Create a solver instance
-solver = z3.Solver()
+def sat_model(path_to_instance='./instances/inst01.dat'):
 
-# Create variables
+	# Create a solver instance
+	solver = z3.Solver()
+
+	# Create variables
 

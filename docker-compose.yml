@@ -1,0 +1,5 @@
+services: 
+  cdmo-container:
+    build: .
+    tty: true
+    stdin_open: true

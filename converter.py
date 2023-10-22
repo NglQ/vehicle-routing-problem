@@ -5,18 +5,28 @@ def convert(filename: str) -> tuple:
     with open(filename, 'r') as f:
         matrix = ''
         for i, line in enumerate(f):
-            match i:
-                case 0:
-                    m = int(line)
-                case 1:
-                    n = int(line)
-                case 2:
-                    l = [int(x) for x in line.split(' ')]
-                case 3:
-                    p = [int(x) for x in line.split(' ')]
+            if i == 0:
+            	m = int(line)
+            elif i == 1:
+            	n = int(line)
+            elif i == 2:
+            	l = [int(x) for x in line.split(' ')]
+            elif i == 3:
+            	p = [int(x) for x in line.split(' ')]
+            else:
+            	matrix += line[:-1] + '; '
+            #match i:
+                #case 0:
+                    #m = int(line)
+                #case 1:
+                    #n = int(line)
+                #case 2:
+                    #l = [int(x) for x in line.split(' ')]
+                #case 3:
+                    #p = [int(x) for x in line.split(' ')]
 
-            if i > 3:
-                matrix += line[:-1] + '; '
+            #if i > 3:
+                #matrix += line[:-1] + '; '
 
     d = np.matrix(matrix[:-2]).tolist()
 
@@ -52,7 +62,7 @@ def generate_cp_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: l
     return indexes
 
 
-def generate_ilp_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list):
+def generate_mip_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: list):
     with open(output_filename, 'w') as f:
         f.write('m = %d;\n' % m)
         f.write('n = %d;\n' % n)
