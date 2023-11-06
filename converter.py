@@ -75,3 +75,19 @@ def generate_mip_dzn(output_filename: str, m: int, n: int, l: list, p: list, d: 
         matrix = matrix[:-1] + ']'
 
         f.write('D = %s;\n' % matrix)
+        
+
+def generate_mip_dat(output_filename: str, m: int, n: int, l: list, p: list, d: list):
+    with open(output_filename, 'w') as f:
+        f.write('data;\n')
+        f.write('param K := %d;\n' % m)
+        f.write('param N := %d;\n' % n)
+        f.write('param C := \n\t%s;\n' % '\n\t'.join([f'{i+1} {j}' for i,j in enumerate(l)]))
+        f.write('param L := \n\t%s;\n' % '\n\t'.join([f'{i+1} {j}' for i,j in enumerate(p)]))
+        f.write(f'param D:  {"  ".join(map(str,range(1,n+2)))} :=\n')
+
+        for i in range(n + 1):
+            f.write(f'\t{i+1} {str(d[i])[1:-1].replace(",", " ")}\n')
+        f.write(';')
+        
+        
