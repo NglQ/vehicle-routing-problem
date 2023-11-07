@@ -49,7 +49,7 @@ COPY SAT/sat.py SAT/
 
 COPY SMT/smt.py SMT/
 
-# CMD ["./main.sh","main.py", "CP/cp.py", "MIP/mip.py", "SAT/sat.py"] #"/bin/bash",
-CMD ["/bin/bash"]
+CMD ["./main.sh","main.py", "CP/cp.py", "MIP/mip.py", "SAT/sat.py"] # "/bin/bash",
+# CMD ["/bin/bash"]
 
 #TODO: docker installs python version 3.12 but it employes python 3.8 for some reason => Understand what's going on
