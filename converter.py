@@ -2,19 +2,20 @@ import numpy as np
 
 
 def convert(filename: str) -> tuple:
+    print(filename)
     with open(filename, 'r') as f:
         matrix = ''
         for i, line in enumerate(f):
             if i == 0:
-            	m = int(line)
+                m = int(line)
             elif i == 1:
-            	n = int(line)
+                n = int(line)
             elif i == 2:
-            	l = [int(x) for x in line.split(' ')]
+                l = [int(x) for x in line.split(' ')]
             elif i == 3:
-            	p = [int(x) for x in line.split(' ')]
+                p = [int(x) for x in line.split(' ')]
             else:
-            	matrix += line[:-1] + '; '
+                matrix += line[:-1] + '; '
             #match i:
                 #case 0:
                     #m = int(line)

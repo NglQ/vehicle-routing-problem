@@ -1,6 +1,10 @@
 from z3 import *
 
 
+def sat_model():
+    pass
+
+
 def mcp_sat(n, m, l, w, D):
     # Building the M matrix: a NxNxm matrix where M_ijk == 1 iff courier k goes from i to j. This will be the solution.
     N = n + 1  # add depot
@@ -150,7 +154,7 @@ def mcp_sat(n, m, l, w, D):
 
     return [[[sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(N)] for i in range(N)], [
         [sol.evaluate(C[i][k]) for k in range(m)] for i in range(N)], [sol.evaluate(H[i]) for i in range(m)]
-
+'''
 import time
 start = time.time()
 
@@ -209,3 +213,4 @@ res = mcp_sat(47,3,[300,200,200],[12,8,16,5,12,5,13,20,13,18,7,6,9,9,4,25,5,17,3
 
 print(time.time() - start)
 print(res)
+'''
