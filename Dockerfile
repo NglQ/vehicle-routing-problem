@@ -1,5 +1,9 @@
 FROM ubuntu:22.04
 
+# docker compose build --build-arg <varname>=<value>
+# if build-arg is not specified, the default value below is used
+ARG MINIZINC_VERSION=2.7.5
+
 RUN apt-get update
 RUN apt-get install -y software-properties-common
 RUN apt-get install -y keyboard-configuration
@@ -29,45 +33,29 @@ RUN python3.11 -m pip install swig
 RUN pysmt-install --confirm-agreement --picosat
 RUN pysmt-install --confirm-agreement --bdd
 
-RUN mkdir cdmo-test
+RUN mkdir cdmo
 
-WORKDIR ./cdmo-test
+WORKDIR ./cdmo
 
-RUN mkdir -p ./res/MIP ./res/CP ./res/SAT ./res/SMT
-
+# Install AMPL
 RUN wget -O ampl.linux64.tgz https://portal.ampl.com/external/?url=https://portal.ampl.com/dl/amplce/ampl.linux64.tgz
 RUN tar -xvf ampl.linux64.tgz
+ENV PATH="${PATH}:/cdmo/ampl.linux-intel64"
 
-COPY ampl.lic ./ampl.linux-intel64
+# Install MiniZinc
+RUN wget https://github.com/MiniZinc/MiniZincIDE/releases/download/$MINIZINC_VERSION/MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64.tgz
+RUN tar -xvf MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64.tgz
+ENV PATH="${PATH}:/cdmo/MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64/bin"
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/cdmo/MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64/lib"
+ENV QT_PLUGIN_PATH="${QT_PLUGIN_PATH}:/cdmo/MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64/plugins"
 
-RUN wget https://github.com/MiniZinc/MiniZincIDE/releases/download/2.7.5/MiniZincIDE-2.7.5-bundle-linux-x86_64.tgz
-RUN tar -xvf MiniZincIDE-2.7.5-bundle-linux-x86_64.tgz
+# Add the project files to the image
+ADD . .
 
-COPY main.sh \
-     main.py ./
+# main.sh is deprecated
+# RUN chmod +x main.sh
 
-COPY converter.py ./
-COPY instance_builder.py ./
+# Execute the main script when the container starts
+RUN echo "python3.11 /cdmo/main.py" >> ~/.bashrc
 
-RUN chmod +x main.sh
-
-RUN mkdir CP MIP SAT SMT
-
-COPY instances ./instances/
-
-COPY CP/instances ./CP/instances/
-COPY CP/cp.py ./CP
-COPY CP/cp.mzn ./CP
-COPY CP/cp.dzn ./CP
-
-COPY MIP/instances ./MIP/instances/
-COPY MIP/mip.py MIP/
-COPY MIP/mip.dat ./MIP
-COPY MIP/mip.mod ./MIP
-
-COPY SAT/sat.py SAT/
-
-COPY SMT/smt.py SMT/
-
-# CMD ["./main.sh","main.py", "CP/cp.py", "MIP/mip.py", "SAT/sat.py"] # "/bin/bash",
 CMD ["/bin/bash"]

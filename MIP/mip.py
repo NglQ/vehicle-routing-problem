@@ -1,9 +1,8 @@
 import time
 
-from amplpy import AMPL, add_to_path
+from amplpy import AMPL
 import json
 import os
-add_to_path("./ampl.linux64")
 
 
 def mip_model():

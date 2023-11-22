@@ -1,5 +1,9 @@
-services: 
+version: '3'
+services:
   cdmo-container:
-    build: .
-    tty: true
+    container_name: cdmo-container
+    build:
+      dockerfile: ./Dockerfile
+    image: cdmo-container
     stdin_open: true
+    tty: true
