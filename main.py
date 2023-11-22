@@ -1,7 +1,7 @@
 import sys
 import os
 
-print("python version: ", sys.version)
+print("Python version:", sys.version)
 
 sys.path.insert(0, './MIP')
 sys.path.insert(0, './CP')

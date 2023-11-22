@@ -1,9 +1,5 @@
 FROM ubuntu:22.04
 
-# docker compose build --build-arg <varname>=<value>
-# if build-arg is not specified, the default value below is used
-ARG MINIZINC_VERSION=2.7.5
-
 RUN apt-get update
 RUN apt-get install -y software-properties-common
 RUN apt-get install -y keyboard-configuration
@@ -41,6 +37,10 @@ WORKDIR ./cdmo
 RUN wget -O ampl.linux64.tgz https://portal.ampl.com/external/?url=https://portal.ampl.com/dl/amplce/ampl.linux64.tgz
 RUN tar -xvf ampl.linux64.tgz
 ENV PATH="${PATH}:/cdmo/ampl.linux-intel64"
+
+# docker compose build --build-arg <varname>=<value>
+# if build-arg is not specified, the default value below is used
+ARG MINIZINC_VERSION=2.7.2
 
 # Install MiniZinc
 RUN wget https://github.com/MiniZinc/MiniZincIDE/releases/download/$MINIZINC_VERSION/MiniZincIDE-$MINIZINC_VERSION-bundle-linux-x86_64.tgz

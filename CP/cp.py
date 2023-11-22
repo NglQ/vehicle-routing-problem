@@ -19,7 +19,7 @@ def cp_model():
 	#  add a model without symmetry breaking constraints
 
 	path_to_cp_instances = './CP/instances'
-	solvers = ['gecode']  # , 'chuffed']  # 'gecode', 'findmus'
+	solvers = ['chuffed']  # , 'chuffed']  # 'gecode', 'findmus'
 	# instance_files = os.listdir(path_to_cp_instances)
 	instance_files = list(filter(lambda x: x == 'cp_inst10.dzn' or x == 'cp_inst01.dzn', os.listdir(path_to_cp_instances)))
 

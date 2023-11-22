@@ -16,18 +16,6 @@ def convert(filename: str) -> tuple:
                 p = [int(x) for x in line.split(' ')]
             else:
                 matrix += line[:-1] + '; '
-            #match i:
-                #case 0:
-                    #m = int(line)
-                #case 1:
-                    #n = int(line)
-                #case 2:
-                    #l = [int(x) for x in line.split(' ')]
-                #case 3:
-                    #p = [int(x) for x in line.split(' ')]
-
-            #if i > 3:
-                #matrix += line[:-1] + '; '
 
     d = np.matrix(matrix[:-2]).tolist()
 
@@ -90,5 +78,3 @@ def generate_mip_dat(output_filename: str, m: int, n: int, l: list, p: list, d: 
         for i in range(n + 1):
             f.write(f'\t{i+1} {str(d[i])[1:-1].replace(",", " ")}\n')
         f.write(';')
-        
-        
