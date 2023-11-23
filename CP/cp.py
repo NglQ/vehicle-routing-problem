@@ -1,88 +1,81 @@
-import minizinc
-from minizinc import Instance, Model, Solver
-import numpy as np
-import json
-import datetime
 import os
+import datetime
 
-print(minizinc.__version__)
+import numpy as np
+import minizinc
+from minizinc import Instance, Model, Solver, Status
+
+print("Minizinc Python API version:", minizinc.__version__, '\n')
+module_path = os.path.dirname(os.path.realpath(__file__))
 
 
-def cp_model():
+def cp_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) -> dict:
+    # TODO
+    #  Check what happens to the `result` variable when no intermediate solutions is found
 
-	# TODO
-	#  Hard time to use time limit with chuffed solver:
-	# 		minizinc.error.MiniZincError:
-	# 		WARNING: the --time-out flag has recently been changed.
-	# 		The time-out is now provided in milliseconds instead of seconds
-	#  Check the cost function
-	#  add a model without symmetry breaking constraints
+    model = Model(os.path.join(module_path, 'cp.mzn'))
+    model.add_file(instance_file, parse_data=True)
+    if sym_break:
+        model.add_string(
+            """
+            constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
+            """
+        )
 
-	path_to_cp_instances = './CP/instances'
-	solvers = ['chuffed']  # , 'chuffed']  # 'gecode', 'findmus'
-	# instance_files = os.listdir(path_to_cp_instances)
-	instance_files = list(filter(lambda x: x == 'cp_inst10.dzn' or x == 'cp_inst01.dzn', os.listdir(path_to_cp_instances)))
+    solver_ins = Solver.lookup(solver)
+    instance = Instance(solver_ins, model)
 
-	for i, ins_file in enumerate(instance_files):
-		stats = dict()
-		for solver in solvers:
-			# time_limit = datetime.timedelta(seconds=300)
-			time_limit = datetime.timedelta(milliseconds=300*1000)
-			model = Model('./CP/cp.mzn')
-			model.add_file(f'{path_to_cp_instances}/{ins_file[:ins_file.find(".")]}.dzn', parse_data=True)
-			solver_ins = Solver.lookup(solver)
-			instance = Instance(solver_ins, model)
+    n = model['N']
 
-			n = model['N']
+    time_limit = datetime.timedelta(seconds=time_limit)
+    result = instance.solve(timeout=time_limit, intermediate_solutions=True)
 
-			result = instance.solve(timeout=time_limit, intermediate_solutions=True)
+    # Get the result in the proper way based on `intermediate_solutions` parameter
+    try:
+        # intermediate_solutions = True
+        solution = result[-1]
+    except TypeError:
+        # intermediate_solutions = False
+        solution = result.solution
 
-			# print('result: ', result)
-			# print(result.status)
-			# print(result[-1].K)
-			# print(result[-1].u)
+    es = np.array(solution.es)
 
-			es = np.array(result[-1].es)
-			# print(es)
+    # Same indexes calculated in the convert.py module
+    indexes = [(i, j) for i in [n - 1] + list(range(1, n - 1)) for j in range(1, n + 1)
+               if i != j and j != n - 1 and (i, j) != (n - 1, n)]
+    idxs = np.array(indexes)
+    sol = [[] for _ in range(es.shape[0])]
 
-			indexes = [(i, j) for i in [n-1] + list(range(1, n-1)) for j in range(1, n+1) if i != j and j != n-1 and (i, j) != (n-1, n)]
-			# print(indexes, '\n\n')
+    # Build path covered by couriers
+    for courier in range(es.shape[0]):
+        e = es[courier]
+        start = e[:n]
+        start = np.where(start == True)[0][0]
 
-			idxs = np.array(indexes)  # TODO check if that's the case
-			# print(idxs, '\n\n')
+        node = idxs[start][1]
+        sol[courier].append(int(node))
 
-			sol = [[] for _ in range(es.shape[0])]
+        while node != n:
+            candidates = np.where(idxs[:, 0] == node)[0]
+            edge_idx = np.where(e[candidates] == True)[0][0] + candidates[0]
+            node = idxs[edge_idx][1]
+            sol[courier].append(int(node))
 
-			for courier in range(es.shape[0]):
-				e = es[courier]
-				start = e[:n]
-				start = np.where(start == True)[0][0]
+        sol[courier].pop()
 
-				node = idxs[start][1]
-				sol[courier].append(int(node))
+    statistics = dict()
+    time = int(result.statistics['time'].seconds)
+    if result.status == Status.OPTIMAL_SOLUTION:
+        if time >= time_limit.seconds:
+            statistics['time'] = time_limit.seconds - 1
+        else:
+            statistics['time'] = time
+        statistics['optimal'] = True
+    else:
+        statistics['time'] = time
+        statistics['optimal'] = False
 
-				while node != n:
-					# print("node: ", node)
-					candidates = np.where(idxs[:, 0] == node)[0]
-					edge_idx = np.where(e[candidates] == True)[0][0] + candidates[0]
-					node = idxs[edge_idx][1]
-					sol[courier].append(int(node))
+    statistics['obj'] = max(solution.K)
+    statistics['sol'] = sol
 
-				sol[courier].pop()
-
-			statistics = dict()
-			statistics['time'] = int(result.statistics['time'].seconds)
-			statistics['optimal'] = statistics['time'] < 300
-			statistics['obj'] = max(result[-1].K)
-			statistics['sol'] = sol
-
-			print(statistics)
-
-			stats[solver] = statistics
-
-		print(stats)
-
-		json_name = ins_file[ins_file.find('.') - 2:ins_file.find('.')]
-		json_name = json_name if json_name[0] != '0' else json_name[-1]
-
-		json.dump(stats, open(f'./res/CP/{json_name}.json', 'w+' if i == 0 else 'a+'))
+    return statistics

@@ -2,7 +2,7 @@ import numpy as np
 
 
 def convert(filename: str) -> tuple:
-    print(filename)
+    print('Parsing ' + filename + '...')
     with open(filename, 'r') as f:
         matrix = ''
         for i, line in enumerate(f):
