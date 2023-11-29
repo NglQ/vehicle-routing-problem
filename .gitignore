@@ -59,3 +59,8 @@ target/
 
 # PyCharm
 .idea/
+
+# CDMO-project
+CDMO_Project.pdf
+useful_material_not_to_publish/
+res_single/

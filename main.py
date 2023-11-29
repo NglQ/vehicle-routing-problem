@@ -1,10 +1,14 @@
 import sys
 import os
+import json
 
 print("Python version:", sys.version, '\n')
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 from CP.cp import cp_model
+from SAT.sat import sat_model
+from MIP.mip import mip_model
+import converter
 from instance_builder import generate_instances
 
 
@@ -52,6 +56,7 @@ if __name__ == '__main__':
                 sym_break_solve, temp_text1 = False, 'without'
                 for _ in range(2):
                     print(f'Solving {instance_file} - CP model {temp_text1} symmetry breaking - {solver} ...')
+                    stats_entry_name = solver + '_' + temp_text1 + '_symbreak'
 
                     stats = cp_model(instance_file, solver, time_limit, sym_break=sym_break_solve)
                     if not sym_break_solve:
@@ -61,19 +66,48 @@ if __name__ == '__main__':
                     temp_text2 = 'was' if is_optimal else 'was not'
                     print(f'Solver stopped. An optimal solution {temp_text2} found after {time} seconds.')
 
-                # TODO: Save statistics
-                # stats[solver] = statistics
-                #
-                # json_name = ins_file[ins_file.find('.') - 2:ins_file.find('.')]
-                # json_name = json_name if json_name[0] != '0' else json_name[-1]
-                #
-                # json.dump(stats, open(f'./res/CP/{json_name}.json', 'w+' if i == 0 else 'a+'))
+                    statistics[stats_entry_name] = stats
+
+            json_file = os.path.join(module_path,
+                                     f'res_single/CP/{instance if instance[0] != "0" else instance[1]}.json')
+            os.makedirs(os.path.dirname(json_file), exist_ok=True)
+            json.dump(statistics, open(json_file, 'w+'))
         elif model_choice == 2:
-            # TODO: implement
-            raise NotImplementedError("MIP not implemented yet")
+            # TODO: finish implementation of symmetry breaking constraint and then update the loop of this section
+            #       to run the model with and without symmetry breaking (i.e., to range(2))
+            instance_file = os.path.join(module_path, f'MIP/instances/mip_inst{instance}.dat')
+            solvers = ['highs', 'scip']
+            time_limit = 300
+            statistics = dict()
+            for solver in solvers:
+                sym_break_solve, temp_text1 = False, 'without'
+                for _ in range(1):
+                    print(f'Solving {instance_file} - MIP model {temp_text1} symmetry breaking - {solver} ...')
+                    stats_entry_name = solver + '_' + temp_text1 + '_symbreak'
+
+                    stats = mip_model(instance_file, solver, time_limit, sym_break=sym_break_solve)
+                    if not sym_break_solve:
+                        sym_break_solve, temp_text1 = True, 'with'
+
+                    is_optimal, time = stats['optimal'], stats['time']
+                    temp_text2 = 'was' if is_optimal else 'was not'
+                    print(f'Solver stopped. An optimal solution {temp_text2} found after {time} seconds.')
+
+                    statistics[stats_entry_name] = stats
+
+            json_file = os.path.join(module_path,
+                                     f'res_single/MIP/{instance if instance[0] != "0" else instance[1]}.json')
+            os.makedirs(os.path.dirname(json_file), exist_ok=True)
+            json.dump(statistics, open(json_file, 'w+'))
         elif model_choice == 3:
-            # TODO: implement
-            raise NotImplementedError("SAT not implemented yet")
+            # TODO: finish implementation
+            import time
+            instance_file = os.path.join(module_path, f'instances/inst{instance}.dat')
+            start = time.time()
+            m, n, l, p, d = converter.convert(instance_file)
+            result = sat_model(m, n, l, p, d)
+            print(f"Time: {time.time() - start}")
+            raise NotImplementedError("SAT not completely implemented yet")
         elif model_choice == 4:
             # TODO: implement
             raise NotImplementedError("SMT not implemented yet")

@@ -1,42 +1,168 @@
+from itertools import chain, combinations
 from z3 import *
+from utils import *
 
+# Useful constraints
+def at_least_one(bool_vars):
+    return Or(bool_vars)
 
-def sat_model():
-    pass
+def at_most_one(bool_vars):
+    return [Not(And(pair[0], pair[1])) for pair in combinations(bool_vars, 2)]
 
+def exactly_one(bool_vars):
+    return at_most_one(bool_vars) + [at_least_one(bool_vars)]
 
-def mcp_sat(n, m, l, w, D):
+# Advanced constraints
+def at_least_k_np(bool_vars, k):
+    #print("at_least")
+    return at_most_k_np([Not(var) for var in bool_vars], len(bool_vars)-k)
+
+def at_most_k_np(bool_vars, k):
+    #print("at_most")
+    return And([Or([Not(x) for x in X]) for X in combinations(bool_vars, k + 1)])
+
+def exactly_k_np(bool_vars, k):
+    #print("excactly")
+    return And(at_most_k_np(bool_vars, k), at_least_k_np(bool_vars, k))
+
+def at_least_one(bool_vars):
+    return Or(bool_vars)
+
+def at_least_one_seq(bool_vars):
+    return at_least_one(bool_vars)
+
+def at_most_one_seq(bool_vars, name):
+    constraints = []
+    n = len(bool_vars)
+    s = [Bool(f"s_{name}_{i}") for i in range(n - 1)]
+    constraints.append(Or(Not(bool_vars[0]), s[0]))
+    constraints.append(Or(Not(bool_vars[n-1]), Not(s[n-2])))
+    for i in range(1, n - 1):
+        constraints.append(Or(Not(bool_vars[i]), s[i]))
+        constraints.append(Or(Not(bool_vars[i]), Not(s[i-1])))
+        constraints.append(Or(Not(s[i-1]), s[i]))
+    return And(constraints)
+
+def exactly_one_seq(bool_vars, name):
+    return And(at_least_one_seq(bool_vars), at_most_one_seq(bool_vars, name))
+
+def at_least_k_seq(bool_vars, k, name):
+    return at_most_k_seq([Not(var) for var in bool_vars], len(bool_vars)-k, name)
+
+def at_most_k_seq(bool_vars, k, name):
+    constraints = []
+    n = len(bool_vars)
+    s = [[Bool(f"s_{name}_{i}_{j}") for j in range(k)] for i in range(n - 1)]
+    constraints.append(Or(Not(bool_vars[0]), s[0][0]))
+    constraints += [Not(s[0][j]) for j in range(1, k)]
+    for i in range(1, n-1):
+        constraints.append(Or(Not(bool_vars[i]), s[i][0]))
+        constraints.append(Or(Not(s[i-1][0]), s[i][0]))
+        constraints.append(Or(Not(bool_vars[i]), Not(s[i-1][k-1])))
+        for j in range(1, k):
+            constraints.append(Or(Not(bool_vars[i]), Not(s[i-1][j-1]), s[i][j]))
+            constraints.append(Or(Not(s[i-1][j]), s[i][j]))
+    constraints.append(Or(Not(bool_vars[n-1]), Not(s[n-2][k-1])))   
+    return And(constraints)
+
+def exactly_k_seq(bool_vars, k, name):
+    return And(at_most_k_seq(bool_vars, k, name), at_least_k_seq(bool_vars, k, name))
+
+# binary addition in SAT. a and b are boolean vectors of length 16. s is the solver.
+def add1(name, d, a, b): # d is the sum of the args    
+    constraints = []
+    #global C
+    # carry matrix
+    C = [Bool(f'C_{name}_{i}') for i in range(17)]
+
+    constraints.append(And(Not(C[0]), Not(C[16])))
+    for i in range(16):
+        constraints.append(C[i] == Or(And(a[i], b[i]), And(a[i], C[i+1]), And(b[i], C[i+1])))        
+
+    for i in range(16):
+        #constraints.append((a[i] == b[i]) == (C[i] == d[i]))
+        constraints.append(d[i] == Or(And(a[i], Not(b[i]), Not(C[i+1])), And(b[i], Not(a[i]), Not(C[i+1])), And(C[i+1], 
+        Not(a[i]), Not(b[i])), And(a[i], b[i], C[i+1])))
+        
+    return And(constraints)
+
+# convert a number to binary
+def toBinary(num, length=16):
+    num_bin = bin(num).split("b")[-1]
+    num_bin = "0"*(length - len(num_bin)) + num_bin
+    return [bool(int(num_bin[i])) for i in range(len(num_bin))]
+        
+
+def add2(name, d, *args):
+    constraints = []
+    #global T
+    T = [[Bool(f'T_{name}_{i}_{j}') for j in range(16)] for i in range(len(args))]
+    
+    for i in range(len(args)-1):
+        constraints.append(add1(f'{name}_{i}', T[i+1][:], T[i][:], args[i+1][:]))
+        #pass
+        
+    for i in range(16):
+        constraints.append(T[0][i] == args[0][i])
+        constraints.append(T[len(args)-1][i] == d[i])
+        #pass
+    return And(constraints)
+    
+# binary multiplication in SAT. a and b are boolean vectors of length 16. s is the solver.
+def multiply(name, a, b, prod): # prod is the product of a and b
+    # define the subsum matrix
+    #global SUM
+    constraints = []
+    S = [[Bool(f'S_{name}_{i}_{j}') for j in range(16)] for i in range(16)]
+    for i in range(16):
+        if i != 0:
+            for k in range(i):
+                constraints.append(Not(S[i][15-k]))
+        for j in range(16):
+            if j+i <= 15:
+                constraints.append(S[i][15-j-i] == And(a[15-j], b[15-i]))
+            if j+i > 15:
+                constraints.append(Not(And(a[15-j], b[15-i])))
+    #print(*[SUM[i][:] for i in range(16)])      
+    # sum every row of the matrix
+    constraints.append(add2(name, prod, *[S[i][:] for i in range(16)]))
+    return And(constraints)
+
+def greater_than(name, a, b): # a is greater than b.
+    constraints = []
+    found_diff = [Bool(f'found_diff_{name}_{i}') for i in range(16)]
+    for i in range(16):
+        #s.add(Or(And(a[i], b[i]), And(Not(a[i]), Not(b[i]))) == Not(found_diff[i]))
+        constraints.append(Or(And(a[i], Not(b[i])), And(Not(a[i]), b[i])) == found_diff[i])
+        constraints.append(Implies(And([Not(found_diff[j]) for j in range(i)]), Or(Not(found_diff[i]), And(a[i], Not(b[i])))))
+    return And(constraints)
+
+def strictly_greater_than(name, a, b): # a is greater than b.
+    constraints = []
+    constraints.append(greater_than(name, a, b))
+    constraints.append(Or([And(a[i], Not(b[i])) for i in range(16)]))
+    return And(constraints)    
+
+def sat_model(m, n, l, w, D):
+    w += [0]
+
+    trial_number = 0
+    
     # Building the M matrix: a NxNxm matrix where M_ijk == 1 iff courier k goes from i to j. This will be the solution.
-    N = n + 1  # add depot
-    M = [[[Bool(f"M_{i}_{j}_{k}") for k in range(m)] for j in range(N)] for i in range(N)]
+    N = toBinary(n + 1)  # add depot
+    M = [[[Bool(f"M_{i}_{j}_{k}") for k in range(m)] for j in range(n+1)] for i in range(n+1)]
 
     # Building the C matrix (customer matrix): a Nxk matrix where C_ik == 1 iff courier k visits customer i
-    C = [[Bool(f"C_{i}_{k}") for k in range(m)] for i in range(N)]
+    C = [[Bool(f"C_{i}_{k}") for k in range(m)] for i in range(n+1)]
 
     # Building cumulative weight matrix
-    U = [BitVec(f"U_{i}", 16) for i in range(N)]
-
-    # Building the H vector: a vector which contains the distance covered for each courier
-    H = []
-    for k in range(m):
-        H_sum = 0
-        for i in range(N):
-            for j in range(N):
-                H_sum += M[i][j][k] * D[i][j]
-                # print(H_sum)
-
-        H.append(H_sum)
-
-    # Variable which symbolizes the maximum of H
-    H_max = Int('max_H')
-
+    U = [[Bool(f"U_{i}_{j}") for j in range(16)] for i in range(n+1)]
+    
     # create solver
-    s = Optimize()
-
-    # CONSTRAINTS
-
+    s = Solver()
+ 
     # 1) In M, each courier cannot go from one location to the same location: M[i,i,k] == 0 for every i, k
-    for i in range(N):
+    for i in range(n+1):
         for k in range(m):
             s.add(Not(M[i][i][k]))
 
@@ -48,169 +174,109 @@ def mcp_sat(n, m, l, w, D):
             C_sum += [C[i][k]]
 
         # constraints for the sum: exactly_one
-        s.add(And(AtLeast(*C_sum, 1), AtMost(*C_sum, 1)))
+        s.add(exactly_one_seq(C_sum, f'l_{i}'))
 
-    # 3) m vehicles leave the depot: sum over k of C[N-1][k] == m
-    # defining the sum
-    C_N_sum = []
-    for k in range(m):
-        # defining the sum
-        C_N_sum += [C[N - 1][k]]
-        # print(at_most_k_np(C_N_sum, m))
-
-    s.add(And(AtLeast(*C_N_sum, m), AtMost(*C_N_sum, m)))
+    # 3) m vehicles leave the depot: C[N-1][k] == 1 for every k
+    s.add(And([C[n][k] for k in range(m)]))
 
     # 4) the same vehicle enters and leaves a given customer
     # the == operator means double implication and is supported by Z3
-    for i in range(N):
+    for i in range(n+1):
         for k in range(m):
             # defining the sum
             M_enter_sum = []
             M_exit_sum = []
-            for j in range(N):
+            for j in range(n+1):
                 M_enter_sum += [M[i][j][k]]
                 M_exit_sum += [M[j][i][k]]
 
             # s.add(And(exactly_one(M_enter_sum)) == And(exactly_one(M_exit_sum)))
-            s.add(Implies(C[i][k], And(AtLeast(*M_enter_sum, 1), AtMost(*M_enter_sum, 1))))
-            s.add(Implies(C[i][k], And(AtLeast(*M_exit_sum, 1), AtMost(*M_exit_sum, 1))))
-            s.add(Implies(Not(C[i][k]), And(AtLeast(*M_enter_sum, 0), AtMost(*M_enter_sum, 0))))
-            s.add(Implies(Not(C[i][k]), And(AtLeast(*M_exit_sum, 0), AtMost(*M_exit_sum, 0))))
-
+            s.add(Implies(C[i][k], And(exactly_one_seq(M_enter_sum, f'n_{i}{k}'))))
+            s.add(Implies(C[i][k], And(exactly_one_seq(M_exit_sum, f'o_{i}{k}'))))
+            s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_enter_sum])))
+            s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_exit_sum])))
+            
     # 5) First constraint on U matrix: for every courier, the N-th element of the matrix must be 0.
-    for i in range(N):
-        s.add(U[i] >= 0)
-        s.add(U[i] <= N - 1)
-        # pass
-
-    # 6) subtour elimination constraint
-    for i in range(N):
-        for j in range(N):
-            for k in range(m):
-                if i != j:  # fix meeeeeeeeeeeeeeeee
-                    pass
-                    # s.add(Implies(And([C[i][k], C[j][k], M[i][j][k]]), U[i][k] - U[j][k] + l[k] <= l[k] - w[j]))
-                    # s.add(Implies(And([C[i][k], C[j][k], Not(M[i][j][k])]), U[i][k] - U[j][k] <= l[k] - w[j]))
-
-    # 7) U lower and upper bounds
-    # chiedi: perché nel modello ILP non definiamo U direttamente come somma cumulata dei pesi, ma mettiamo
-    # solo i constraint?
-    for k in range(m):
-        for i in range(N):
-            # s.add(Implies(C[i][k], And(w[i] <= U[i][k], U[i][k] <= l[k])))
-            # s.add(Implies(Not(C[i][k]), U[i][k] == 0))
-            pass
-
-    for i in range(N - 1):
-        for j in range(N - 1):
-            M_ij_sum = []
+    for i in range(n+1):
+        s.add(greater_than(f'a_{i}', U[i][:], toBinary(0)))
+        s.add(greater_than(f'b_{i}', toBinary(n), U[i][:]))
+        
+    for i in range(n):
+        var2 = [Bool(f'var2_{i}_{l}') for l in range(16)]
+        s.add(add1(f'c_{i}', var2, U[i][:], toBinary(1)))
+        for j in range(n):
+            #M_ij_sum = []
             if i != j:
                 for k in range(m):
-                    M_ij_sum += [M[i][j][k]]
-                    # s.add(Implies(And(AtLeast(*M_ij_sum,1), AtMost(*M_ij_sum,1)), U[i] - U[j] <= -1))
-                    s.add(Implies(M[i][j][k], U[i] - U[j] <= -1))
-
-    # MTZ constraint
-    # for k in range(m):
-    # for i in range(N-1):
-    # for j in range(N-1):
-    # s.add(Implies(M[i][j][k], U[j][k] > U[i][k]))
-    # pass
-
+                    #M_ij_sum += [M[i][j][k]]
+                    #s.add(Implies(And(AtLeast(*M_ij_sum,1), AtMost(*M_ij_sum,1)), greater_than('f', U[j][:], var2)))
+                    s.add(Implies(M[i][j][k], greater_than(f'd_{i}{j}', U[j][:], var2)))
+                    
     # Constraint sui pesi
     for k in range(m):
-        sum_w = 0
-        for i in range(N):
-            sum_w += w[i] * C[i][k]
-        s.add(sum_w <= l[k])
+        sum_w = [Bool(f'sum_w_{k}_{i}') for i in range(16)]
+        sum_w_list = []
+        for i in range(n+1):
+            sum_w_list_i = [Bool(f'sum_w_list_i_{k}{i}_{l}') for l in range(16)]
+            s.add(Implies(C[i][k], And([sum_w_list_i[l] == toBinary(w[i])[l] for l in range(16)])))
+            s.add(Implies(Not(C[i][k]), And([Not(sum_w_list_i[l]) for l in range(16)])))
+            sum_w_list.append(sum_w_list_i)
+        s.add(add2(f'e_{k}', sum_w, *sum_w_list))
+        s.add(greater_than(f'f_{k}', toBinary(l[k]), sum_w))
 
+    # Building the H vector: a vector which contains the distance covered for each courier
+    H = [[Bool(f'H_{i}_{k}') for i in range(16)] for k in range(m)]
+    for k in range(m):
+        H_list = []
+        for i in range(n+1):
+            for j in range(n+1):
+                H_list_i = [Bool(f'H_list_i_{k}{i}{j}_{l}') for l in range(16)]
+                s.add(Implies(M[i][j][k], And([H_list_i[l] == toBinary(D[i][j])[l] for l in range(16)])))
+                s.add(Implies(Not(M[i][j][k]), And([Not(H_list_i[l]) for l in range(16)])))
+                H_list.append(H_list_i)
+        #print(H_sum)
+        s.add(add2(f'g_{k}', H[k][:], *H_list))    
+        
+    # Variable which symbolizes the maximum of H
+    H_max = [Bool(f'H_max_{i}') for i in range(16)]
+    
     # 8) H_max constraint: H_max is the maximum value of H.
     # print(maximum(H))
-    s.add(Or([H_max == H[i] for i in range(len(H))]))  # v is an element in x)
+    s.add(Or([And([H_max[j] == H[i][j] for j in range(16)]) for i in range(len(H))]))  # v is an element in x)
     for i in range(len(H)):
-        s.add(H_max >= H[i])  # and it's the greatest
-
-    # 9) H_max lower bound: H_max is higher than the maximum distance between the distances starting from depot
-    # D_max = max(D[n][:])
-    # s.add(H_max >= 436)
-    # s.add(H_max <= 1000)
-
+        s.add(greater_than(f'h_{i}', H_max, H[i]))  # and it's the greatest
+    
     distances = []
-    for i in range(N - 1):
-        distances.append(D[i][N - 1] + D[N - 1][i])
+    for i in range(n):
+        distances.append(D[i][n] + D[n][i])
 
     print(distances)
-    s.add(H_max >= max(distances))
+    s.add(greater_than('i', H_max, toBinary(max(distances))))
 
     # Objective function: minimize H_max
-    s.minimize(H_max)
+    #s.minimize(H_max)
 
     # timeout
-    s.set("timeout", 150000)
+    #s.set("timeout", 150000)
+    
+    s.add(greater_than('j', toBinary(250), H_max))
 
-    s.check()
-    print(s.check())
-    sol = s.model()
-
-    return [[[sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(N)] for i in range(N)], [
-        [sol.evaluate(C[i][k]) for k in range(m)] for i in range(N)], [sol.evaluate(H[i]) for i in range(m)]
-'''
-import time
-start = time.time()
-
-#inst13
-D = [[0,60,141,22,41,137,77,48,92,105,113,103,82,15,79,24,98,69,82,30,105,89,57,94,75,50,127,16,36,77,57,70,51,101,88,38,83,108,81,124,54,131,99,70,112,162,94,64],
-[60,0,83,82,99,81,53,106,34,61,57,43,140,63,23,56,84,59,142,88,45,79,27,34,33,46,107,58,94,17,29,26,109,51,34,30,45,48,23,64,50,73,41,26,68,104,34,36],
-[141,83,0,129,182,4,64,189,63,36,28,126,223,126,106,139,167,142,125,171,128,52,110,117,116,129,24,125,177,100,84,71,192,40,53,103,58,131,90,147,87,70,100,71,29,101,117,77],
-[22,82,129,0,55,125,65,60,80,93,101,125,94,19,101,46,120,91,60,42,127,77,79,116,97,72,115,24,48,99,53,58,63,89,76,52,71,130,89,146,42,119,99,58,100,150,116,52],
-[41,99,182,55,0,178,118,11,133,146,154,118,41,56,76,43,65,40,115,41,130,130,72,125,66,53,168,57,15,100,98,111,50,142,129,79,124,107,122,91,95,172,140,111,153,203,119,105],
-[137,81,4,125,178,0,60,185,61,32,24,124,219,122,102,135,163,138,121,167,126,48,106,115,112,125,26,121,173,98,80,67,188,36,49,99,54,129,88,145,83,68,98,67,25,99,115,73],
-[77,53,64,65,118,60,0,125,33,28,36,96,159,62,72,75,103,78,89,107,98,26,50,87,68,65,54,61,113,70,24,27,128,24,19,39,8,101,60,117,23,54,70,27,35,85,87,17],
-[48,106,189,60,11,185,125,0,140,153,161,125,34,63,83,50,76,47,104,30,137,137,79,132,73,60,175,64,12,107,105,118,39,149,136,86,131,114,129,102,102,179,147,118,160,210,126,112],
-[92,34,63,80,133,61,33,140,0,41,37,63,174,77,57,90,118,93,122,122,65,59,61,54,67,80,87,76,128,37,35,22,143,31,14,54,25,68,27,84,38,39,37,22,48,70,54,28],
-[105,61,36,93,146,32,28,153,41,0,8,104,187,90,80,103,131,106,89,135,106,18,74,95,80,93,46,89,141,78,48,35,156,10,27,67,22,109,68,125,51,48,78,35,7,79,95,41],
-[113,57,28,101,154,24,36,161,37,8,0,100,195,98,78,111,139,114,97,143,102,24,82,91,88,101,50,97,149,74,56,43,164,12,25,75,30,105,64,121,59,44,74,43,11,75,91,49],
-[103,43,126,125,118,124,96,125,63,104,100,0,159,106,42,79,103,78,185,111,12,122,46,9,52,65,150,101,113,26,72,69,128,94,77,73,88,11,36,35,93,56,26,69,111,85,9,79],
-[82,140,223,94,41,219,159,34,174,187,195,159,0,97,117,84,86,81,98,52,171,171,113,166,107,94,209,98,46,141,139,152,31,183,170,120,165,148,163,124,136,213,181,152,194,244,160,146],
-[15,63,126,19,56,122,62,63,77,90,98,106,97,0,82,27,101,72,79,45,108,74,60,97,78,53,112,5,51,80,42,55,66,86,73,33,68,111,70,127,39,116,84,55,97,147,97,49],
-[79,23,106,101,76,102,72,83,57,80,78,42,117,82,0,55,61,36,161,87,54,98,22,49,10,29,126,77,71,24,48,45,96,70,53,49,64,31,46,45,69,96,64,45,87,127,43,55],
-[24,56,139,46,43,135,75,50,90,103,111,79,84,27,55,0,74,45,106,32,87,87,33,82,51,26,125,22,38,57,55,68,53,99,86,36,81,84,79,100,52,129,97,68,110,160,76,62],
-[98,84,167,120,65,163,103,76,118,131,139,103,86,101,61,74,0,29,180,106,115,117,57,110,51,48,153,96,80,85,83,96,115,127,114,68,109,92,107,68,88,157,125,96,138,188,104,90],
-[69,59,142,91,40,138,78,47,93,106,114,78,81,72,36,45,29,0,151,77,90,90,32,85,26,19,128,67,51,60,58,71,86,102,89,39,84,67,82,55,59,132,100,71,113,163,79,65],
-[82,142,125,60,115,121,89,104,122,89,97,185,98,79,161,106,180,151,0,74,187,73,139,176,157,132,111,84,100,159,113,116,67,91,108,112,97,190,149,206,92,129,159,116,96,160,176,106],
-[30,88,171,42,41,167,107,30,122,135,143,111,52,45,87,32,106,77,74,0,119,119,65,114,83,58,157,46,26,89,87,100,21,131,118,68,113,116,111,132,84,161,129,100,142,192,108,94],
-[105,45,128,127,130,126,98,137,65,106,102,12,171,108,54,87,115,90,187,119,0,124,58,11,64,77,152,103,125,30,74,71,140,96,79,75,90,23,38,47,95,58,28,71,113,73,11,81],
-[89,79,52,77,130,48,26,137,59,18,24,122,171,74,98,87,117,90,73,119,124,0,76,113,94,77,38,73,125,96,50,53,140,28,45,51,34,127,86,143,35,66,96,53,23,97,113,43],
-[57,27,110,79,72,106,50,79,61,74,82,46,113,60,22,33,57,32,139,65,58,76,0,53,18,19,104,55,67,28,26,39,82,70,57,27,52,51,50,67,47,100,68,39,81,131,47,33],
-[94,34,117,116,125,115,87,132,54,95,91,9,166,97,49,82,110,85,176,114,11,113,53,0,59,72,141,92,120,25,63,60,135,85,68,64,79,18,27,42,84,47,17,60,102,78,6,70],
-[75,33,116,97,66,112,68,73,67,80,88,52,107,78,10,51,51,26,157,83,64,94,18,59,0,25,122,73,61,34,44,45,92,76,63,45,60,41,56,49,65,106,74,45,87,137,53,51],
-[50,46,129,72,53,125,65,60,80,93,101,65,94,53,29,26,48,19,132,58,77,77,19,72,25,0,115,48,48,47,45,58,67,89,76,26,71,58,69,74,42,119,87,58,100,150,66,52],
-[127,107,24,115,168,26,54,175,87,46,50,150,209,112,126,125,153,128,111,157,152,38,104,141,122,115,0,111,163,124,78,81,178,56,73,89,62,155,114,171,73,94,124,81,39,125,141,71],
-[16,58,125,24,57,121,61,64,76,89,97,101,98,5,77,22,96,67,84,46,103,73,55,92,73,48,111,0,52,75,41,54,67,85,72,28,67,106,65,122,38,115,83,54,96,146,92,48],
-[36,94,177,48,15,173,113,12,128,141,149,113,46,51,71,38,80,51,100,26,125,125,67,120,61,48,163,52,0,95,93,106,35,137,124,74,119,102,117,106,90,167,135,106,148,198,114,100],
-[77,17,100,99,100,98,70,107,37,78,74,26,141,80,24,57,85,60,159,89,30,96,28,25,34,47,124,75,95,0,46,43,110,68,51,47,62,31,22,47,67,72,40,43,85,103,19,53],
-[57,29,84,53,98,80,24,105,35,48,56,72,139,42,48,55,83,58,113,87,74,50,26,63,44,45,78,41,93,46,0,13,108,44,31,19,26,77,36,93,21,74,46,13,55,105,63,7],
-[70,26,71,58,111,67,27,118,22,35,43,69,152,55,45,68,96,71,116,100,71,53,39,60,45,58,81,54,106,43,13,0,121,31,18,32,19,74,33,90,24,61,43,0,42,92,60,10],
-[51,109,192,63,50,188,128,39,143,156,164,128,31,66,96,53,115,86,67,21,140,140,82,135,92,67,178,67,35,110,108,121,0,152,139,89,134,125,132,141,105,182,150,121,163,213,129,115],
-[101,51,40,89,142,36,24,149,31,10,12,94,183,86,70,99,127,102,91,131,96,28,70,85,76,89,56,85,137,68,44,31,152,0,17,63,18,99,58,115,47,38,68,31,17,69,85,37],
-[88,34,53,76,129,49,19,136,14,27,25,77,170,73,53,86,114,89,108,118,79,45,57,68,63,76,73,72,124,51,31,18,139,17,0,50,11,82,41,98,34,43,51,18,34,74,68,24],
-[38,30,103,52,79,99,39,86,54,67,75,73,120,33,49,36,68,39,112,68,75,51,27,64,45,26,89,28,74,47,19,32,89,63,50,0,45,78,43,94,20,93,61,32,74,124,64,26],
-[83,45,58,71,124,54,8,131,25,22,30,88,165,68,64,81,109,84,97,113,90,34,52,79,60,71,62,67,119,62,26,19,134,18,11,45,0,93,52,109,29,48,62,19,29,79,79,19],
-[108,48,131,130,107,129,101,114,68,109,105,11,148,111,31,84,92,67,190,116,23,127,51,18,41,58,155,106,102,31,77,74,125,99,82,78,93,0,41,24,98,65,33,74,116,96,14,84],
-[81,23,90,89,122,88,60,129,27,68,64,36,163,70,46,79,107,82,149,111,38,86,50,27,56,69,114,65,117,22,36,33,132,58,41,43,52,41,0,57,57,50,18,33,75,81,27,43],
-[124,64,147,146,91,145,117,102,84,125,121,35,124,127,45,100,68,55,206,132,47,143,67,42,49,74,171,122,106,47,93,90,141,115,98,94,109,24,57,0,114,89,57,90,132,120,36,100],
-[54,50,87,42,95,83,23,102,38,51,59,93,136,39,69,52,88,59,92,84,95,35,47,84,65,42,73,38,90,67,21,24,105,47,34,20,29,98,57,114,0,77,67,24,58,108,84,14],
-[131,73,70,119,172,68,54,179,39,48,44,56,213,116,96,129,157,132,129,161,58,66,100,47,106,119,94,115,167,72,74,61,182,38,43,93,48,65,50,89,77,0,32,61,55,31,53,67],
-[99,41,100,99,140,98,70,147,37,78,74,26,181,84,64,97,125,100,159,129,28,96,68,17,74,87,124,83,135,40,46,43,150,68,51,61,62,33,18,57,67,32,0,43,85,63,21,53],
-[70,26,71,58,111,67,27,118,22,35,43,69,152,55,45,68,96,71,116,100,71,53,39,60,45,58,81,54,106,43,13,0,121,31,18,32,19,74,33,90,24,61,43,0,42,92,60,10],
-[112,68,29,100,153,25,35,160,48,7,11,111,194,97,87,110,138,113,96,142,113,23,81,102,87,100,39,96,148,85,55,42,163,17,34,74,29,116,75,132,58,55,85,42,0,86,102,48],
-[162,104,101,150,203,99,85,210,70,79,75,85,244,147,127,160,188,163,160,192,73,97,131,78,137,150,125,146,198,103,105,92,213,69,74,124,79,96,81,120,108,31,63,92,86,0,84,98],
-[94,34,117,116,119,115,87,126,54,95,91,9,160,97,43,76,104,79,176,108,11,113,47,6,53,66,141,92,114,19,63,60,129,85,68,64,79,14,27,36,84,53,21,60,102,84,0,70],
-[64,36,77,52,105,73,17,112,28,41,49,79,146,49,55,62,90,65,106,94,81,43,33,70,51,52,71,48,100,53,7,10,115,37,24,26,19,84,43,100,14,67,53,10,48,98,70,0]]
-
-res = mcp_sat(47,3,[300,200,200],[12,8,16,5,12,5,13,20,13,18,7,6,9,9,4,25,5,17,3,16,25,21,14,19,14,6,16,9,20,13,10,16,19,22,14,10,11,15,13,15,8,22,24,3,25,19,21,0],D)
-
-
-print(time.time() - start)
-print(res)
-'''
+    while s.check() == sat:
+        sol = s.model()
+        H_current = [sol.evaluate(H_max[j]) for j in range(16)]
+        print(s.check(), f'trial_number: {trial_number}, H_current: {H_current}')
+        s.add(strictly_greater_than(f'l_{trial_number}', H_current, H_max))
+        print(s.check())
+        trial_number += 1
+        if s.check() == sat:
+            final_sol = s.model()
+        else:
+            final_sol = sol
+    
+    #s.check()
+    #print(s.check())
+    #sol = s.model()
+    
+    return [[[final_sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(n+1)] for i in range(n+1)], [
+        [final_sol.evaluate(C[i][k]) for k in range(m)] for i in range(n+1)], [[final_sol.evaluate(U[i][j]) for j in range(16)] for i in range(n+1)], [[final_sol.evaluate(H[i][j]) for j in range(16)]for i in range(m)], [
+        final_sol.evaluate(H_max[i]) for i in range(16)]

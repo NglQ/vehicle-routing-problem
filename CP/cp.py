@@ -10,8 +10,7 @@ module_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def cp_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-    # TODO
-    #  Check what happens to the `result` variable when no intermediate solutions is found
+    # TODO: Check what happens to the `result` variable when no intermediate solutions is found
 
     model = Model(os.path.join(module_path, 'cp.mzn'))
     model.add_file(instance_file, parse_data=True)
@@ -27,8 +26,8 @@ def cp_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) 
 
     n = model['N']
 
-    time_limit = datetime.timedelta(seconds=time_limit)
-    result = instance.solve(timeout=time_limit, intermediate_solutions=True)
+    time_limit_mzn = datetime.timedelta(seconds=time_limit)
+    result = instance.solve(timeout=time_limit_mzn, intermediate_solutions=True)
 
     # Get the result in the proper way based on `intermediate_solutions` parameter
     try:
@@ -66,13 +65,13 @@ def cp_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) 
     statistics = dict()
     time = int(result.statistics['time'].seconds)
     if result.status == Status.OPTIMAL_SOLUTION:
-        if time >= time_limit.seconds:
-            statistics['time'] = time_limit.seconds - 1
+        if time >= time_limit:
+            statistics['time'] = time_limit - 1
         else:
             statistics['time'] = time
         statistics['optimal'] = True
     else:
-        statistics['time'] = time
+        statistics['time'] = time_limit
         statistics['optimal'] = False
 
     statistics['obj'] = max(solution.K)
