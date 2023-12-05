@@ -6,7 +6,7 @@ def generate_lowerbound(n,D):
         distances = []
         for i in range(n):
             distances.append(D[i][n] + D[n][i])
-        return distances
+        return max(distances)
 
 
 def generate_upperbound(n, m, D):
