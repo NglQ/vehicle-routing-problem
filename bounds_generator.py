@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def generate_lowerbound(n,D):
+def generate_lowerbound(n, D):
 
         distances = []
         for i in range(n):

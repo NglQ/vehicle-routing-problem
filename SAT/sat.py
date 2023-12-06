@@ -2,6 +2,8 @@ from itertools import chain, combinations
 from z3 import *
 from utils import *
 
+from converter import convert
+
 # Useful constraints
 def at_least_one(bool_vars):
     return Or(bool_vars)
@@ -143,7 +145,15 @@ def strictly_greater_than(name, a, b): # a is greater than b.
     constraints.append(Or([And(a[i], Not(b[i])) for i in range(16)]))
     return And(constraints)    
 
-def sat_model(m, n, l, w, D):
+def sat_model(instance_file: str, solver: str, time_limit: int, sym_break: bool):
+    if sym_break:
+        print('Symmetry breaking constraints not implemented for SAT model yet.')
+        return None
+    if solver != 'z3':
+        print('Only z3 solver is supported for SAT model.')
+        return None
+
+    m, n, l, w, D = convert(instance_file)
     w += [0]
 
     trial_number = 0
@@ -160,6 +170,10 @@ def sat_model(m, n, l, w, D):
     
     # create solver
     s = Solver()
+
+    # timeout
+    timeout = time_limit / 2 * 1000
+    # s.set("timeout", timeout)
  
     # 1) In M, each courier cannot go from one location to the same location: M[i,i,k] == 0 for every i, k
     for i in range(n+1):
@@ -255,9 +269,6 @@ def sat_model(m, n, l, w, D):
 
     # Objective function: minimize H_max
     #s.minimize(H_max)
-
-    # timeout
-    #s.set("timeout", 150000)
     
     s.add(greater_than('j', toBinary(250), H_max))
 

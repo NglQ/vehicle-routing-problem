@@ -14,6 +14,10 @@ def mip_model(instance_file: str, solver: str, time_limit: int, sym_break: bool)
 	# TODO: add symmetry breaking constraints
 	# TODO: email pacco!!!
 
+	if sym_break:
+		print('Symmetry breaking constraints not implemented for MIP model yet.')
+		return None
+
 	ampl_solver = AMPL()
 	ampl_solver.eval(f"reset data;")
 	ampl_solver.set_option("gentimes", 0)

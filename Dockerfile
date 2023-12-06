@@ -27,8 +27,9 @@ RUN python3.11 -m pip install amplpy
 RUN python3.11 -m pip install pysmt
 RUN python3.11 -m pip install swig
 
-RUN pysmt-install --confirm-agreement --picosat
-RUN pysmt-install --confirm-agreement --bdd
+RUN pysmt-install --confirm-agreement --msat
+# RUN pysmt-install --confirm-agreement --picosat
+# RUN pysmt-install --confirm-agreement --bdd
 
 RUN mkdir cdmo
 
