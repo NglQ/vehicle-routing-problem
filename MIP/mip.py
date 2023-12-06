@@ -4,22 +4,20 @@ from amplpy import AMPL, add_to_path
 import json
 import os
 
+from bounds_generator import generate_lowerbound, generate_upperbound
+
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 # TODO: add_to_path() is only useful to run the code from the local machine, not from the container
-add_to_path('/home/edo/ampl')
+add_to_path('/home/angelo/ampl.linux-intel64')
 
 
 def mip_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-	# TODO: add symmetry breaking constraints
 	# TODO: email pacco!!!
-
-	if sym_break:
-		print('Symmetry breaking constraints not implemented for MIP model yet.')
-		return None
 
 	ampl_solver = AMPL()
 	ampl_solver.eval(f"reset data;")
+
 	ampl_solver.set_option("gentimes", 0)
 	ampl_solver.set_option("times", 0)
 
@@ -27,9 +25,29 @@ def mip_model(instance_file: str, solver: str, time_limit: int, sym_break: bool)
 	ampl_solver.read_data(instance_file)
 	ampl_solver.set_option("solver", solver)
 
+	n = ampl_solver.get_parameter('N').value()
+	m = ampl_solver.get_parameter('K').value()
+	D = ampl_solver.get_parameter('D').to_list()
+
+	d = [[0 for i in range(n+1)] for _ in range(n+1)]
+	for row, col, val in D:
+		d[row-1][col-1] = val
+
+	lb = generate_lowerbound(n, d)
+	ub = generate_upperbound(n, m, d)
+
+	ampl_solver.eval("s.t. lower_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] >="+str(lb)+";")
+	ampl_solver.eval("s.t. upper_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] <="+str(ub)+";")
+
+
+	if sym_break:
+		ampl_solver.eval("s.t. sym_break {k in COURIERS, m in COURIERS, j in NODES: k<m}: max(sum{i in NODES} y[i,k]*L[i], sum{i in NODES} y[i,m]*L[i]) <= min(C[k], C[m]) ==> ((x[N+1, j, k] == 1) ==> sum{l in {1..j}} x[N+1, l, m] == 0);")
+
 	# Each solver has its own way to set time limit example:
 	# ampl_solver.set_option('highs_options', f'time_limit={1}')
 	ampl_solver.set_option(f'{solver}_options', f'time_limit={time_limit}')
+
+	# ampl_solver.eval(f"reset data;")
 
 	start_time = time.time()
 	ampl_solver.solve()
