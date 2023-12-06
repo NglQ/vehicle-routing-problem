@@ -1,37 +1,43 @@
 from itertools import chain, combinations
-from z3 import *
+from z3 import Or, Not, And, Bool, Implies, Solver, sat
 from utils import *
 
 from converter import convert
+
 
 # Useful constraints
 def at_least_one(bool_vars):
     return Or(bool_vars)
 
+
 def at_most_one(bool_vars):
     return [Not(And(pair[0], pair[1])) for pair in combinations(bool_vars, 2)]
+
 
 def exactly_one(bool_vars):
     return at_most_one(bool_vars) + [at_least_one(bool_vars)]
 
+
 # Advanced constraints
 def at_least_k_np(bool_vars, k):
-    #print("at_least")
     return at_most_k_np([Not(var) for var in bool_vars], len(bool_vars)-k)
 
+
 def at_most_k_np(bool_vars, k):
-    #print("at_most")
     return And([Or([Not(x) for x in X]) for X in combinations(bool_vars, k + 1)])
 
+
 def exactly_k_np(bool_vars, k):
-    #print("excactly")
     return And(at_most_k_np(bool_vars, k), at_least_k_np(bool_vars, k))
+
 
 def at_least_one(bool_vars):
     return Or(bool_vars)
 
+
 def at_least_one_seq(bool_vars):
     return at_least_one(bool_vars)
+
 
 def at_most_one_seq(bool_vars, name):
     constraints = []
@@ -45,11 +51,14 @@ def at_most_one_seq(bool_vars, name):
         constraints.append(Or(Not(s[i-1]), s[i]))
     return And(constraints)
 
+
 def exactly_one_seq(bool_vars, name):
     return And(at_least_one_seq(bool_vars), at_most_one_seq(bool_vars, name))
 
+
 def at_least_k_seq(bool_vars, k, name):
     return at_most_k_seq([Not(var) for var in bool_vars], len(bool_vars)-k, name)
+
 
 def at_most_k_seq(bool_vars, k, name):
     constraints = []
@@ -67,8 +76,10 @@ def at_most_k_seq(bool_vars, k, name):
     constraints.append(Or(Not(bool_vars[n-1]), Not(s[n-2][k-1])))   
     return And(constraints)
 
+
 def exactly_k_seq(bool_vars, k, name):
     return And(at_most_k_seq(bool_vars, k, name), at_least_k_seq(bool_vars, k, name))
+
 
 # binary addition in SAT. a and b are boolean vectors of length 16. s is the solver.
 def add1(name, d, a, b): # d is the sum of the args    
@@ -87,6 +98,7 @@ def add1(name, d, a, b): # d is the sum of the args
         Not(a[i]), Not(b[i])), And(a[i], b[i], C[i+1])))
         
     return And(constraints)
+
 
 # convert a number to binary
 def toBinary(num, length=16):
@@ -109,7 +121,8 @@ def add2(name, d, *args):
         constraints.append(T[len(args)-1][i] == d[i])
         #pass
     return And(constraints)
-    
+
+
 # binary multiplication in SAT. a and b are boolean vectors of length 16. s is the solver.
 def multiply(name, a, b, prod): # prod is the product of a and b
     # define the subsum matrix
@@ -130,6 +143,7 @@ def multiply(name, a, b, prod): # prod is the product of a and b
     constraints.append(add2(name, prod, *[S[i][:] for i in range(16)]))
     return And(constraints)
 
+
 def greater_than(name, a, b): # a is greater than b.
     constraints = []
     found_diff = [Bool(f'found_diff_{name}_{i}') for i in range(16)]
@@ -139,11 +153,13 @@ def greater_than(name, a, b): # a is greater than b.
         constraints.append(Implies(And([Not(found_diff[j]) for j in range(i)]), Or(Not(found_diff[i]), And(a[i], Not(b[i])))))
     return And(constraints)
 
+
 def strictly_greater_than(name, a, b): # a is greater than b.
     constraints = []
     constraints.append(greater_than(name, a, b))
     constraints.append(Or([And(a[i], Not(b[i])) for i in range(16)]))
     return And(constraints)    
+
 
 def sat_model(instance_file: str, solver: str, time_limit: int, sym_break: bool):
     if sym_break:

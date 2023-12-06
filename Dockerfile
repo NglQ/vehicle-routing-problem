@@ -16,20 +16,20 @@ RUN apt-get install -y python3.11-dev
 RUN apt-get install -y python3-pip
 
 RUN apt-get install -y wget
+RUN apt-get install -y libgmp3-dev
 
 RUN python3.11 -m pip install minizinc
 RUN python3.11 -m pip install minizinc[dzn]
 RUN python3.11 -m pip install numpy
-RUN python3.11 -m pip install z3-solver
+# RUN python3.11 -m pip install z3-solver
 RUN python3.11 -m pip install utils
 
 RUN python3.11 -m pip install amplpy
 RUN python3.11 -m pip install pysmt
 RUN python3.11 -m pip install swig
 
+RUN pysmt-install --confirm-agreement --z3
 RUN pysmt-install --confirm-agreement --msat
-# RUN pysmt-install --confirm-agreement --picosat
-# RUN pysmt-install --confirm-agreement --bdd
 
 RUN mkdir cdmo
 
@@ -53,9 +53,6 @@ ENV QT_PLUGIN_PATH="${QT_PLUGIN_PATH}:/cdmo/MiniZincIDE-$MINIZINC_VERSION-bundle
 
 # Add the project files to the image
 ADD . .
-
-# main.sh is deprecated
-# RUN chmod +x main.sh
 
 # Execute the main script when the container starts
 RUN echo "python3.11 /cdmo/main.py" >> ~/.bashrc
