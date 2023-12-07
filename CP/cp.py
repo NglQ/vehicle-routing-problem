@@ -43,7 +43,7 @@ def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: 
 
     time_limit_mzn = datetime.timedelta(seconds=time_limit)
     start_time = time.time()
-    result = instance.solve(timeout=time_limit_mzn, intermediate_solutions=True)
+    result = instance.solve(timeout=time_limit_mzn, intermediate_solutions=True, processes=15)
     elapsed_time = time.time() - start_time
 
     # Get the result in the proper way based on `intermediate_solutions` parameter
@@ -53,6 +53,10 @@ def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: 
     except TypeError:
         # intermediate_solutions = False
         solution = result.solution
+    except IndexError:
+        assert result.status == Status.UNKNOWN and len(result.solution) == 0
+        print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
+        return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
     es = np.array(solution.es)
 

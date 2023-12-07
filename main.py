@@ -15,7 +15,7 @@ models = {
     'CP': (cp_model, ['gecode', 'chuffed']),
     'SAT': (sat_model, ['z3']),
     'SMT': (smt_model, ['z3', 'msat']),
-    'MIP': (mip_model, ['cbc'])
+    'MIP': (mip_model, ['gurobi', 'xpress', 'copt'])
 }
 
 

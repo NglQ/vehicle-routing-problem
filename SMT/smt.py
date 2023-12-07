@@ -135,6 +135,7 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
             optimal_solution = True
     except:
         if not intermediate_sol_found:
+            print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
         elapsed_time = time.time() - start_time
