@@ -23,6 +23,7 @@ RUN python3.11 -m pip install minizinc[dzn]
 RUN python3.11 -m pip install numpy
 # RUN python3.11 -m pip install z3-solver
 RUN python3.11 -m pip install utils
+RUN python3.11 -m pip install networkx
 
 RUN python3.11 -m pip install amplpy
 RUN python3.11 -m pip install pysmt

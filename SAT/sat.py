@@ -2,14 +2,16 @@ from z3 import *
 import networkx as nx
 import numpy as np
 import math
-
 from converter import convert
+
 
 def at_least_one(bool_vars):
     return Or(bool_vars)
 
+
 def at_least_one_seq(bool_vars):
     return at_least_one(bool_vars)
+
 
 def at_most_one_seq(bool_vars, name):
     constraints = []
@@ -23,11 +25,14 @@ def at_most_one_seq(bool_vars, name):
         constraints.append(Or(Not(s[i-1]), s[i]))
     return And(constraints)
 
+
 def exactly_one_seq(bool_vars, name):
     return And(at_least_one_seq(bool_vars), at_most_one_seq(bool_vars, name))
 
+
 def at_least_k_seq(bool_vars, k, name):
     return at_most_k_seq([Not(var) for var in bool_vars], len(bool_vars)-k, name)
+
 
 def at_most_k_seq(bool_vars, k, name):
     constraints = []
@@ -45,8 +50,10 @@ def at_most_k_seq(bool_vars, k, name):
     constraints.append(Or(Not(bool_vars[n-1]), Not(s[n-2][k-1])))
     return And(constraints)
 
+
 def exactly_k_seq(bool_vars, k, name):
     return And(at_most_k_seq(bool_vars, k, name), at_least_k_seq(bool_vars, k, name))
+
 
 # binary addition in SAT. a and b are boolean vectors of length 16. s is the solver.
 def add1(name, d, a, b, length): # d is the sum of the args
@@ -66,11 +73,13 @@ def add1(name, d, a, b, length): # d is the sum of the args
 
     return And(constraints)
 
+
 # convert a number to binary
 def toBinary(num, length):
     num_bin = bin(num).split("b")[-1]
     num_bin = "0"*(length - len(num_bin)) + num_bin
     return [bool(int(num_bin[i])) for i in range(len(num_bin))]
+
 
 def toInt(num, length):
     num_int = 0
@@ -78,6 +87,7 @@ def toInt(num, length):
       if num[i]:
         num_int += 2**(length-1-i)
     return num_int
+
 
 def add2(name, d, *args, length):
     constraints = []
@@ -94,6 +104,7 @@ def add2(name, d, *args, length):
         #pass
     return And(constraints)
 
+
 def greater_than(name, a, b, length): # a is greater than b.
     constraints = []
     found_diff = [Bool(f'found_diff_{name}_{i}') for i in range(length)]
@@ -103,11 +114,13 @@ def greater_than(name, a, b, length): # a is greater than b.
         constraints.append(Implies(And([Not(found_diff[j]) for j in range(i)]), Or(Not(found_diff[i]), And(a[i], Not(b[i])))))
     return And(constraints)
 
+
 def strictly_greater_than(name, a, b, length): # a is greater than b.
     constraints = []
     constraints.append(greater_than(name, a, b, length=length))
     constraints.append(Or([And(a[i], Not(b[i])) for i in range(length)]))
     return And(constraints)
+
 
 def toPath(M):
     a = np.array(M)
@@ -124,6 +137,7 @@ def toPath(M):
 
     return allpaths
 
+
 def bit_bound(upper_bound, n, l):
   # se ci sono n nodi e m corrieri, visto che m corrieri lasciano il depot
   # (esplorando almeno un nodo) il corriere con distanza maggiore passa al massimo
@@ -136,7 +150,8 @@ def bit_bound(upper_bound, n, l):
   number_of_bits = math.ceil(math.log2(max_value))
   return number_of_bits    
 
-def mcp_sat(n, m, l, w, D, lower_bound, upper_bound):
+
+def sat_model(n, m, l, w, D, lower_bound, upper_bound):
     w += [0]
     trial_number = 0
     length = bit_bound(upper_bound, m, l)
