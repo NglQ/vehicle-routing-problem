@@ -150,8 +150,14 @@ def bit_bound(upper_bound, n, l):
   number_of_bits = math.ceil(math.log2(max_value))
   return number_of_bits    
 
+def max_of(name, H_max, H, length): # H_max is the maximum of H
+  constraints = []
+  constraints.append(Or([And([H_max[j] == H[i][j] for j in range(length)]) for i in range(len(H))]))  # v is an element in x)
+  for i in range(len(H)):
+      constraints.append(greater_than(f'h_{name}_{i}', H_max, H[i], length=length))  # and it's the greatest
+  return And(constraints)
 
-def sat_model(n, m, l, w, D, lower_bound, upper_bound):
+def sat_model(n, m, l, w, D, lower_bound, upper_bound, symbreak=False):
     w += [0]
     trial_number = 0
     length = bit_bound(upper_bound, m, l)
@@ -222,6 +228,7 @@ def sat_model(n, m, l, w, D, lower_bound, upper_bound):
                     s.add(Implies(M[i][j][k], greater_than(f'd_{i}{j}', U[j][:], var2, length=length)))
 
     # Constraint sui pesi
+    loads = []
     for k in range(m):
         sum_w = [Bool(f'sum_w_{k}_{i}') for i in range(length)]
         sum_w_list = []
@@ -232,6 +239,21 @@ def sat_model(n, m, l, w, D, lower_bound, upper_bound):
             sum_w_list.append(sum_w_list_i)
         s.add(add2(f'e_{k}', sum_w, *sum_w_list, length=length))
         s.add(greater_than(f'f_{k}', toBinary(l[k], length=length), sum_w, length=length))
+        loads.append(sum_w)
+
+    if symbreak:
+      # symmetry breaking constraint
+      #constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)))
+      # row(es, i) = M[:][:][i] flattened
+      for i in range(m):
+        for j in range(m):
+          if i < j:
+            max_value = [Bool(f'max_value_{i}_{j}_{k}') for k in range(length)]
+            s.add(max_of(f'p_{i}_{j}', max_value, [loads[i], loads[j]], length=length)) 
+            for t in range(n):
+              #s.add(Implies(And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value, length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
+              s.add(Implies(And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value, length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
+            #s.add(Implies(max_value <= min(l[i], l[j]), precedes(M[n][:][i], M[n][:][j])))
 
     # Building the H vector: a vector which contains the distance covered for each courier
     H = [[Bool(f'H_{i}_{k}') for i in range(length)] for k in range(m)]
@@ -268,6 +290,7 @@ def sat_model(n, m, l, w, D, lower_bound, upper_bound):
 
     # timeout
     #s.set("timeout", 150000)
+    print(s.check())
 
     while s.check() == sat:
         sol = s.model()
