@@ -5,15 +5,29 @@ import numpy as np
 import minizinc
 from minizinc import Instance, Model, Solver, Status
 
+from converter import convert
+from bounds_generator import generate_lowerbound, generate_upperbound
+
 print("Minizinc Python API version:", minizinc.__version__, '\n')
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 
-def cp_model(instance_file: str, solver: str, time_limit: int, sym_break: bool) -> dict:
+def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
     # TODO: Check what happens to the `result` variable when no intermediate solutions is found
+
+    # Calculate lower and upper bounds
+    m, n, l, p, d = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))
+    lower_bound = generate_lowerbound(n, d)
+    upper_bound = generate_upperbound(n, m, d)
 
     model = Model(os.path.join(module_path, 'cp.mzn'))
     model.add_file(instance_file, parse_data=True)
+    model.add_string(
+        f"""
+        constraint objective >= {lower_bound};
+        constraint objective <= {upper_bound};
+        """
+    )
     if sym_break:
         model.add_string(
             """

@@ -39,7 +39,7 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 print(f'Solving {instance_file} - {model_name} model {temp_text1} symmetry breaking - {solver} ...')
                 stats_entry_name = solver + '_' + temp_text1 + '_symbreak'
 
-                stats = model_function(instance_file, solver, time_limit, sym_break=sym_break_solve)
+                stats = model_function(instance_file, instance, solver, time_limit, sym_break=sym_break_solve)
                 if stats is None:
                     print(f'Solver not started. No solution found.')
                     continue
@@ -146,7 +146,7 @@ if __name__ == '__main__':
         solve_instances(model_function, instances, solvers, 300, 'res_multiple')
 
     elif choice == 3:
-        # TODO: implement
-        raise NotImplementedError("Not implemented yet")
+        instances = [str(i) if i >= 10 else '0' + str(i) for i in range(1, 22)]
+        ...
     else:
         raise ValueError("Invalid choice")
