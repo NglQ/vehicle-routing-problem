@@ -15,7 +15,7 @@ models = {
     'CP': (cp_model, ['gecode', 'chuffed']),
     'SAT': (sat_model, ['z3']),
     'SMT': (smt_model, ['z3', 'msat']),
-    'MIP': (mip_model, ['highs', 'scip'])
+    'MIP': (mip_model, ['cbc'])
 }
 
 
@@ -141,6 +141,8 @@ if __name__ == '__main__':
 
     elif choice == 3:
         instances = [str(i) if i >= 10 else '0' + str(i) for i in range(1, 22)]
-        ...
+
+        for model_name, (model_function, solvers) in models.items():
+            solve_instances(model_function, instances, solvers, 300, 'res')
     else:
         raise ValueError("Invalid choice")

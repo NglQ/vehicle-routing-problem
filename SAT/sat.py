@@ -1,6 +1,7 @@
 import os
 import math
 import time
+import signal
 
 import numpy as np
 from z3 import *
@@ -171,6 +172,10 @@ def max_of(name, H_max, H, length):  # H_max is the maximum of H
     return And(constraints)
 
 
+def timeout_handler(signum, frame):
+    raise Exception("Timeout")
+
+
 def sat_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
     # TODO: implement timeout
 
@@ -178,166 +183,173 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         print(f'Solver {solver} not supported for SAT model.')
         return None
 
+    signal.signal(signal.SIGALRM, timeout_handler)
+    signal.alarm(time_limit)
+    intermediate_sol_found = False
     start_time = time.time()
 
-    # Calculate lower and upper bounds
-    m, n, l, w, D = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))
-    lower_bound = generate_lowerbound(n, D)
-    upper_bound = generate_upperbound(n, m, D)
+    try:
+        # Calculate lower and upper bounds
+        m, n, l, w, D = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))
+        lower_bound = generate_lowerbound(n, D)
+        upper_bound = generate_upperbound(n, m, D)
 
-    w += [0]
-    trial_number = 0
-    length = bit_bound(upper_bound, m, l)
-    # print(length)
+        w += [0]
+        trial_number = 0
+        length = bit_bound(upper_bound, m, l)
+        # print(length)
 
-    # Building the M matrix: a NxNxm matrix where M_ijk == 1 iff courier k goes from i to j. This will be the solution.
-    N = toBinary(n + 1, length=length)  # add depot
-    M = [[[Bool(f"M_{i}_{j}_{k}") for k in range(m)] for j in range(n + 1)] for i in range(n + 1)]
+        # Building the M matrix: a NxNxm matrix where M_ijk == 1 iff courier k goes from i to j. This will be the solution.
+        N = toBinary(n + 1, length=length)  # add depot
+        M = [[[Bool(f"M_{i}_{j}_{k}") for k in range(m)] for j in range(n + 1)] for i in range(n + 1)]
 
-    # Building the C matrix (customer matrix): a Nxk matrix where C_ik == 1 iff courier k visits customer i
-    C = [[Bool(f"C_{i}_{k}") for k in range(m)] for i in range(n + 1)]
+        # Building the C matrix (customer matrix): a Nxk matrix where C_ik == 1 iff courier k visits customer i
+        C = [[Bool(f"C_{i}_{k}") for k in range(m)] for i in range(n + 1)]
 
-    # Building cumulative weight matrix
-    U = [[Bool(f"U_{i}_{j}") for j in range(length)] for i in range(n + 1)]
+        # Building cumulative weight matrix
+        U = [[Bool(f"U_{i}_{j}") for j in range(length)] for i in range(n + 1)]
 
-    # create solver
-    s = Solver()
+        # create solver
+        s = Solver()
 
-    # 1) In M, each courier cannot go from one location to the same location: M[i,i,k] == 0 for every i, k
-    for i in range(n + 1):
-        for k in range(m):
-            s.add(Not(M[i][i][k]))
+        # 1) In M, each courier cannot go from one location to the same location: M[i,i,k] == 0 for every i, k
+        for i in range(n + 1):
+            for k in range(m):
+                s.add(Not(M[i][i][k]))
 
-    # 2) Each customer is visited exactly once: for every i (except depot), the sum over the k of C must be 1
-    for i in range(n):
-        # defining the sum
-        C_sum = []
-        for k in range(m):
-            C_sum += [C[i][k]]
-
-        # constraints for the sum: exactly_one
-        s.add(exactly_one_seq(C_sum, f'l_{i}'))
-
-    # 3) m vehicles leave the depot: C[N-1][k] == 1 for every k
-    s.add(And([C[n][k] for k in range(m)]))
-
-    # 4) the same vehicle enters and leaves a given customer
-    # the == operator means double implication and is supported by Z3
-    for i in range(n + 1):
-        for k in range(m):
+        # 2) Each customer is visited exactly once: for every i (except depot), the sum over the k of C must be 1
+        for i in range(n):
             # defining the sum
-            M_enter_sum = []
-            M_exit_sum = []
-            for j in range(n + 1):
-                M_enter_sum += [M[i][j][k]]
-                M_exit_sum += [M[j][i][k]]
+            C_sum = []
+            for k in range(m):
+                C_sum += [C[i][k]]
 
-            # s.add(And(exactly_one(M_enter_sum)) == And(exactly_one(M_exit_sum)))
-            s.add(Implies(C[i][k], And(exactly_one_seq(M_enter_sum, f'n_{i}{k}'))))
-            s.add(Implies(C[i][k], And(exactly_one_seq(M_exit_sum, f'o_{i}{k}'))))
-            s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_enter_sum])))
-            s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_exit_sum])))
+            # constraints for the sum: exactly_one
+            s.add(exactly_one_seq(C_sum, f'l_{i}'))
 
-    # 5) First constraint on U matrix: for every courier, the N-th element of the matrix must be 0.
-    for i in range(n + 1):
-        s.add(greater_than(f'a_{i}', U[i][:], toBinary(0, length=length), length=length))
-        s.add(greater_than(f'b_{i}', toBinary(n, length=length), U[i][:], length=length))
+        # 3) m vehicles leave the depot: C[N-1][k] == 1 for every k
+        s.add(And([C[n][k] for k in range(m)]))
 
-    for i in range(n):
-        var2 = [Bool(f'var2_{i}_{l}') for l in range(length)]
-        s.add(add1(f'c_{i}', var2, U[i][:], toBinary(1, length=length), length=length))
-        for j in range(n):
-            # M_ij_sum = []
-            if i != j:
-                for k in range(m):
-                    # M_ij_sum += [M[i][j][k]]
-                    # s.add(Implies(And(AtLeast(*M_ij_sum,1), AtMost(*M_ij_sum,1)), greater_than('f', U[j][:], var2)))
-                    s.add(Implies(M[i][j][k], greater_than(f'd_{i}{j}', U[j][:], var2, length=length)))
-
-    # Constraint sui pesi
-    loads = []
-    for k in range(m):
-        sum_w = [Bool(f'sum_w_{k}_{i}') for i in range(length)]
-        sum_w_list = []
+        # 4) the same vehicle enters and leaves a given customer
+        # the == operator means double implication and is supported by Z3
         for i in range(n + 1):
-            sum_w_list_i = [Bool(f'sum_w_list_i_{k}{i}_{l}') for l in range(length)]
-            s.add(Implies(C[i][k], And([sum_w_list_i[l] == toBinary(w[i], length=length)[l] for l in range(length)])))
-            s.add(Implies(Not(C[i][k]), And([Not(sum_w_list_i[l]) for l in range(length)])))
-            sum_w_list.append(sum_w_list_i)
-        s.add(add2(f'e_{k}', sum_w, *sum_w_list, length=length))
-        s.add(greater_than(f'f_{k}', toBinary(l[k], length=length), sum_w, length=length))
-        loads.append(sum_w)
+            for k in range(m):
+                # defining the sum
+                M_enter_sum = []
+                M_exit_sum = []
+                for j in range(n + 1):
+                    M_enter_sum += [M[i][j][k]]
+                    M_exit_sum += [M[j][i][k]]
 
-    if sym_break:
-        # symmetry breaking constraint
-        # constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)))
-        # row(es, i) = M[:][:][i] flattened
-        for i in range(m):
-            for j in range(m):
-                if i < j:
-                    max_value = [Bool(f'max_value_{i}_{j}_{k}') for k in range(length)]
-                    s.add(max_of(f'p_{i}_{j}', max_value, [loads[i], loads[j]], length=length))
-                    for t in range(n):
-                        # s.add(Implies(And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value, length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
-                        s.add(Implies(
-                            And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value,
-                                             length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
-                    # s.add(Implies(max_value <= min(l[i], l[j]), precedes(M[n][:][i], M[n][:][j])))
+                # s.add(And(exactly_one(M_enter_sum)) == And(exactly_one(M_exit_sum)))
+                s.add(Implies(C[i][k], And(exactly_one_seq(M_enter_sum, f'n_{i}{k}'))))
+                s.add(Implies(C[i][k], And(exactly_one_seq(M_exit_sum, f'o_{i}{k}'))))
+                s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_enter_sum])))
+                s.add(Implies(Not(C[i][k]), And([Not(i) for i in M_exit_sum])))
 
-    # Building the H vector: a vector which contains the distance covered for each courier
-    H = [[Bool(f'H_{i}_{k}') for i in range(length)] for k in range(m)]
-    for k in range(m):
-        H_list = []
+        # 5) First constraint on U matrix: for every courier, the N-th element of the matrix must be 0.
         for i in range(n + 1):
-            for j in range(n + 1):
-                H_list_i = [Bool(f'H_list_i_{k}{i}{j}_{l}') for l in range(length)]
-                s.add(Implies(M[i][j][k],
-                              And([H_list_i[l] == toBinary(D[i][j], length=length)[l] for l in range(length)])))
-                s.add(Implies(Not(M[i][j][k]), And([Not(H_list_i[l]) for l in range(length)])))
-                H_list.append(H_list_i)
-        # print(H_sum)
-        s.add(add2(f'g_{k}', H[k][:], *H_list, length=length))
+            s.add(greater_than(f'a_{i}', U[i][:], toBinary(0, length=length), length=length))
+            s.add(greater_than(f'b_{i}', toBinary(n, length=length), U[i][:], length=length))
 
-    # Variable which symbolizes the maximum of H
-    H_max = [Bool(f'H_max_{i}') for i in range(length)]
+        for i in range(n):
+            var2 = [Bool(f'var2_{i}_{l}') for l in range(length)]
+            s.add(add1(f'c_{i}', var2, U[i][:], toBinary(1, length=length), length=length))
+            for j in range(n):
+                # M_ij_sum = []
+                if i != j:
+                    for k in range(m):
+                        # M_ij_sum += [M[i][j][k]]
+                        # s.add(Implies(And(AtLeast(*M_ij_sum,1), AtMost(*M_ij_sum,1)), greater_than('f', U[j][:], var2)))
+                        s.add(Implies(M[i][j][k], greater_than(f'd_{i}{j}', U[j][:], var2, length=length)))
 
-    # 8) H_max constraint: H_max is the maximum value of H.
-    # print(maximum(H))
-    s.add(Or([And([H_max[j] == H[i][j] for j in range(length)]) for i in range(len(H))]))  # v is an element in x)
-    for i in range(len(H)):
-        s.add(greater_than(f'h_{i}', H_max, H[i], length=length))  # and it's the greatest
+        # Constraint sui pesi
+        loads = []
+        for k in range(m):
+            sum_w = [Bool(f'sum_w_{k}_{i}') for i in range(length)]
+            sum_w_list = []
+            for i in range(n + 1):
+                sum_w_list_i = [Bool(f'sum_w_list_i_{k}{i}_{l}') for l in range(length)]
+                s.add(Implies(C[i][k], And([sum_w_list_i[l] == toBinary(w[i], length=length)[l] for l in range(length)])))
+                s.add(Implies(Not(C[i][k]), And([Not(sum_w_list_i[l]) for l in range(length)])))
+                sum_w_list.append(sum_w_list_i)
+            s.add(add2(f'e_{k}', sum_w, *sum_w_list, length=length))
+            s.add(greater_than(f'f_{k}', toBinary(l[k], length=length), sum_w, length=length))
+            loads.append(sum_w)
 
-    distances = []
-    for i in range(n):
-        distances.append(D[i][n] + D[n][i])
+        if sym_break:
+            # symmetry breaking constraint
+            # constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)))
+            # row(es, i) = M[:][:][i] flattened
+            for i in range(m):
+                for j in range(m):
+                    if i < j:
+                        max_value = [Bool(f'max_value_{i}_{j}_{k}') for k in range(length)]
+                        s.add(max_of(f'p_{i}_{j}', max_value, [loads[i], loads[j]], length=length))
+                        for t in range(n):
+                            # s.add(Implies(And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value, length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
+                            s.add(Implies(
+                                And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value,
+                                                 length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
+                        # s.add(Implies(max_value <= min(l[i], l[j]), precedes(M[n][:][i], M[n][:][j])))
 
-    s.add(greater_than('i', H_max, toBinary(lower_bound, length=length), length=length))
-    s.add(greater_than('j', toBinary(upper_bound, length=length), H_max, length=length))
+        # Building the H vector: a vector which contains the distance covered for each courier
+        H = [[Bool(f'H_{i}_{k}') for i in range(length)] for k in range(m)]
+        for k in range(m):
+            H_list = []
+            for i in range(n + 1):
+                for j in range(n + 1):
+                    H_list_i = [Bool(f'H_list_i_{k}{i}{j}_{l}') for l in range(length)]
+                    s.add(Implies(M[i][j][k],
+                                  And([H_list_i[l] == toBinary(D[i][j], length=length)[l] for l in range(length)])))
+                    s.add(Implies(Not(M[i][j][k]), And([Not(H_list_i[l]) for l in range(length)])))
+                    H_list.append(H_list_i)
+            # print(H_sum)
+            s.add(add2(f'g_{k}', H[k][:], *H_list, length=length))
 
-    # symmetry breaking constraints
-    #  constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
+        # Variable which symbolizes the maximum of H
+        H_max = [Bool(f'H_max_{i}') for i in range(length)]
 
-    # timeout
-    # s.set("timeout", 150000)
-    print(s.check())
+        # 8) H_max constraint: H_max is the maximum value of H.
+        # print(maximum(H))
+        s.add(Or([And([H_max[j] == H[i][j] for j in range(length)]) for i in range(len(H))]))  # v is an element in x)
+        for i in range(len(H)):
+            s.add(greater_than(f'h_{i}', H_max, H[i], length=length))  # and it's the greatest
 
-    optimal_solution = False
-    while s.check() == sat:
-        sol = s.model()
-        H_current = [sol.evaluate(H_max[j]) for j in range(length)]
-        print(s.check(), f'trial_number: {trial_number}, H_current: {toInt(H_current, length=length)}')
-        s.add(strictly_greater_than(f'l_{trial_number}', H_current, H_max, length=length))
+        distances = []
+        for i in range(n):
+            distances.append(D[i][n] + D[n][i])
+
+        s.add(greater_than('i', H_max, toBinary(lower_bound, length=length), length=length))
+        s.add(greater_than('j', toBinary(upper_bound, length=length), H_max, length=length))
+
+        # symmetry breaking constraints
+        #  constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
+
+        # timeout
+        # s.set("timeout", 150000)
         print(s.check())
-        trial_number += 1
-        if s.check() == sat:
-            final_sol = s.model()
-        else:
-            final_sol = sol
-            optimal_solution = True
+
+        optimal_solution = False
+        while s.check() == sat:
+            sol = s.model()
+            intermediate_sol_found = True
+            H_current = [sol.evaluate(H_max[j]) for j in range(length)]
+            print(s.check(), f'trial_number: {trial_number}, H_current: {toInt(H_current, length=length)}')
+            s.add(strictly_greater_than(f'l_{trial_number}', H_current, H_max, length=length))
+            print(s.check())
+            trial_number += 1
+            if s.check() == sat:
+                sol = s.model()
+            else:
+                optimal_solution = True
+    except:
+        if not intermediate_sol_found:
+            return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
     elapsed_time = time.time() - start_time
-    path = toPath([[[final_sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(n + 1)] for i in range(n + 1)])
-    objective = toInt([final_sol.evaluate(H_max[i]) for i in range(length)], length=length)
+    path = toPath([[[sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(n + 1)] for i in range(n + 1)])
+    objective = toInt([sol.evaluate(H_max[i]) for i in range(length)], length=length)
 
     statistics = dict()
     elapsed_time = int(elapsed_time)

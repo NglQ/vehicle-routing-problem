@@ -1,7 +1,7 @@
 param N integer >= 0; # Number of customers
 param K integer >= 0; # Number of couriers
 
-set NODES := {1..N}; 
+set NODES := {1..N};
 set NODES_1 := {1..N+1};
 set COURIERS := {1..K};
 
@@ -11,9 +11,7 @@ param D{NODES_1, NODES_1} integer >= 0; # weights of the arcs
 
 var x{NODES_1, NODES_1, COURIERS} in {0..1}; # Edges tensor
 var y{NODES_1, COURIERS} in {0..1}; # customers matrix
-# var u{NODES_1, COURIERS} integer >= 0; # Cumulative load delivered by couriers
 var u{NODES} integer >= 0; # Cumulative load delivered by couriers
-var objective integer >= 0; # Objective function
 
 minimize cost_function : max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k];
 
