@@ -1,5 +1,4 @@
 import time
-import json
 import os
 
 from amplpy import AMPL, add_to_path
@@ -83,5 +82,4 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	statistics['obj'] = total_cost
 	statistics['sol'] = full_path
 
-	print(instance_file, solver, statistics)
 	return statistics

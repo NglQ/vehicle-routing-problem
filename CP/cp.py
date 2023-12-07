@@ -1,4 +1,5 @@
 import os
+import time
 import datetime
 
 import numpy as np
@@ -41,7 +42,9 @@ def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: 
     n = model['N']
 
     time_limit_mzn = datetime.timedelta(seconds=time_limit)
+    start_time = time.time()
     result = instance.solve(timeout=time_limit_mzn, intermediate_solutions=True)
+    elapsed_time = time.time() - start_time
 
     # Get the result in the proper way based on `intermediate_solutions` parameter
     try:
@@ -77,18 +80,18 @@ def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: 
         sol[courier].pop()
 
     statistics = dict()
-    time = int(result.statistics['time'].seconds)
+    elapsed_time = int(elapsed_time)
     if result.status == Status.OPTIMAL_SOLUTION:
-        if time >= time_limit:
+        if elapsed_time >= time_limit:
             statistics['time'] = time_limit - 1
         else:
-            statistics['time'] = time
+            statistics['time'] = elapsed_time
         statistics['optimal'] = True
     else:
         statistics['time'] = time_limit
         statistics['optimal'] = False
 
-    statistics['obj'] = max(solution.K)
+    statistics['obj'] = solution.objective
     statistics['sol'] = sol
 
     return statistics
