@@ -54,6 +54,7 @@ ENV QT_PLUGIN_PATH="${QT_PLUGIN_PATH}:/cdmo/MiniZincIDE-$MINIZINC_VERSION-bundle
 
 # Add the project files to the image
 ADD . .
+COPY ./ampl.lic ./ampl.linux-intel64/ampl.lic
 
 # Execute the main script when the container starts
 RUN echo "python3.11 /cdmo/main.py" >> ~/.bashrc
