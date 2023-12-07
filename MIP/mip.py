@@ -33,8 +33,8 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 			"s.t. sym_break {k in COURIERS, m in COURIERS, j in NODES: k<m}: max(sum{i in NODES} y[i,k]*L[i], "
 			"sum{i in NODES} y[i,m]*L[i]) <= min(C[k], C[m]) ==> ((x[N+1, j, k] == 1) ==> sum{l in {1..j}} x[N+1, l, m] == 0);"
 		)
-	ampl_solver.eval("s.t. lower_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] >="+str(lb)+";")
-	ampl_solver.eval("s.t. upper_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] <="+str(ub)+";")
+	#ampl_solver.eval("s.t. lower_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] >="+str(lb)+";")
+	#ampl_solver.eval("s.t. upper_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] <="+str(ub)+";")
 
 	ampl_solver.read_data(instance_file)
 	ampl_solver.set_option("solver", solver)

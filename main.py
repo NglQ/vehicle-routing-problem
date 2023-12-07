@@ -46,10 +46,7 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 if not sym_break_solve:
                     sym_break_solve, temp_text1 = True, 'with'
 
-                try:
-                    is_optimal, time = stats['optimal'], stats['time']
-                except:
-                    is_optimal, time = False, -1
+                is_optimal, time = stats['optimal'], stats['time']
                 temp_text2 = 'was' if is_optimal else 'was not'
                 print(f'Solver stopped. An optimal solution {temp_text2} found after {time} seconds.')
 
@@ -58,10 +55,7 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
         json_file = os.path.join(module_path,
                                  f'{res_folder}/{model_name}/{instance if instance[0] != "0" else instance[1]}.json')
         os.makedirs(os.path.dirname(json_file), exist_ok=True)
-        try:
-            json.dump(statistics, open(json_file, 'w+'))
-        except:
-            pass
+        json.dump(statistics, open(json_file, 'w+'))
 
 
 if __name__ == '__main__':

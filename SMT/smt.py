@@ -1,3 +1,5 @@
+import time
+
 from pysmt.shortcuts import Symbol, Solver, And, GE, LE, Plus, Equals, Int, Store, Select, Minus, Times, ExactlyOne, Max, Implies, Or, LT
 from pysmt.typing import INT, ArrayType
 
@@ -5,12 +7,12 @@ from converter import convert
 import bounds_generator as bds_gen
 
 
-def smt_model(instance_file: str, solver: str, time_limit: int, sym_break: bool):
+def smt_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
     if sym_break:
         print('Symmetry breaking constraints not implemented for SAT model yet.')
         return None
 
-    print(f'{instance_file} - {solver} - {time_limit} - {sym_break}')
+    start_time = time.time()
 
     m, n, l, p, d = convert(instance_file)
     p += [0]
@@ -107,6 +109,7 @@ def smt_model(instance_file: str, solver: str, time_limit: int, sym_break: bool)
         # __8__ symmetry breaking constraint
         # forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
 
+        optimal_solution = False
         s.push()
         try:
             print('trying solving the problem...')
@@ -129,6 +132,9 @@ def smt_model(instance_file: str, solver: str, time_limit: int, sym_break: bool)
                 final_sol = s.get_model() if s.check_sat() else sol
         except:
             final_sol = sol
+            optimal_solution = True
+
+        elapsed_time = time.time() - start_time
 
         # print(f'after:  {res}')
         # print('X: \n')
@@ -152,7 +158,3 @@ def smt_model(instance_file: str, solver: str, time_limit: int, sym_break: bool)
         print(final_sol.get_value(H_max))
 
         return final_sol
-
-
-if __name__ == '__main__':
-    smt_model()
