@@ -2,7 +2,6 @@ import numpy as np
 
 
 def generate_lowerbound(n, D):
-
         distances = []
         for i in range(n):
             distances.append(D[i][n] + D[n][i])
@@ -10,7 +9,6 @@ def generate_lowerbound(n, D):
 
 
 def generate_upperbound(n, m, D):
-
     depot_to_cities = np.array(D[-1][:len(D) - 1])
     cities_to_depot = np.array([D[i][-1] for i in range(len(D) - 1)])
     depot_cities_depot = depot_to_cities + cities_to_depot
@@ -29,4 +27,4 @@ def generate_upperbound(n, m, D):
         visited.append(idx)
 
     dist += D[visited[-1]][n]
-    return max(np.append(distances, dist))
+    return int(max(np.append(distances, dist)))
