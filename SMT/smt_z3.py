@@ -2,6 +2,9 @@ from z3 import *
 import numpy as np
 import networkx as nx
 
+import converter
+
+
 def generate_lowerbound(n,D):
         distances = []
         for i in range(n):
@@ -105,11 +108,8 @@ def smt_model(n, m, l, w, D, LB=None, UB=None, SB=False):
     # 6) Anti-subtour constraint
     for i in range(n):
         for j in range(n):
-            #X_ij_sum = []
             if i != j:
                 for k in range(m):
-                    #X_ij_sum += [X[i][j][k]]
-                #s.add(Implies(And(AtLeast(*X_ij_sum,1), AtMost(*X_ij_sum,1)), U[i] - U[j] <= -1))
                     s.add(Implies(X[i][j][k], U[i] - U[j] <= -1))
 
     # 7) Maximum load constraint
@@ -148,19 +148,31 @@ def smt_model(n, m, l, w, D, LB=None, UB=None, SB=False):
             max_value = Int(f'max_value_{i}_{j}')
             s.add(max_of(max_value, [loads[i], loads[j]]))
             for t in range(n):
-              #s.add(Implies(And(loads[i] > loads[j], loads[i] <= min(l[i], l[j]), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
-              #s.add(Implies(And(loads[i] < loads[j], loads[j] <= min(l[i], l[j]), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
               s.add(Implies(And(max_value <= min(l[i], l[j]), X[n][t][i]), And([Not(X[n][o][j]) for o in range(t)])))
-            #s.add(Implies(max_value <= min(l[i], l[j]), precedes(M[n][:][i], M[n][:][j])))
 
     # OBJECTIVE FUNCTION: minimize H_max
     s.minimize(H_max)
-
-    # TIMEOUT
-    #s.set("timeout", 150000)
 
     s.check()
     print(s.check())
     sol = s.model()
 
+    x_dict = dict()
+    for i in range(N):
+        for j in range(N):
+            for k in range(m):
+                x_dict[(i, j, k)] = sol.evaluate(X[i][j][k])
+
+    full_path = []
+    for i in range(m):
+        path = [k for k, v in x_dict.items() if v == 1 and k[2] == i]
+        start = n
+        sub_path = []
+        while len(sub_path) < len(path) - 1:
+            next_step = list(filter(lambda e: e[0] == start, path))[0]
+            start = next_step[1]
+            sub_path.append(start + 1)
+        full_path.append(sub_path)
+
     return {"obj": sol.evaluate(H_max), "sol": toPath([[[sol.evaluate(X[i][j][k]) for k in range(m)] for j in range(N)] for i in range(N)])}
+

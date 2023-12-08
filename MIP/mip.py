@@ -1,7 +1,6 @@
 import time
 import os
 
-import numpy as np
 from amplpy import AMPL, add_to_path
 
 from bounds_generator import generate_lowerbound, generate_upperbound
@@ -10,10 +9,12 @@ from converter import convert
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 # TODO: add_to_path() is only useful to run the code from the local machine, not from the container
-add_to_path('/home/edo/ampl')
+add_to_path('/home/angelo/ampl.linux-intel64')
 
 
 def mip_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
+	# TODO: email pacco!!!
+	# TODO: here "solved" means optimal???
 
 	# Calculate lower and upper bounds
 	m, n, l, p, d = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))
@@ -58,13 +59,6 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	m = ampl_solver.get_parameter("K").to_list()[0]
 
 	x_dict = x.to_dict()
-
-	# X_np = np.zeros((n + 1, n + 1, m))
-	# for i in range(1, n + 2):
-	# 	for j in range(1, n + 2):
-	# 		for k in range(1, m + 1):
-	# 			X_np[i-1, j-1, k-1] = x_dict[(i, j, k)]
-
 	full_path = []
 	for i in range(1, m + 1):
 		path = [k for k, v in x_dict.items() if v > 0 and k[2] == i]
@@ -79,6 +73,7 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	statistics = dict()
 	elapsed_time = int(elapsed_time)
 	statistics['time'] = elapsed_time
+	# TODO: here "solved" means optimal???
 	if ampl_solver.solve_result == "solved":
 		if elapsed_time >= time_limit:
 			statistics['time'] = time_limit - 1

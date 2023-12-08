@@ -1,7 +1,6 @@
-import os
-import math
 import time
 import signal
+from _thread import interrupt_main
 
 import numpy as np
 from z3 import *
@@ -172,16 +171,11 @@ def max_of(name, H_max, H, length):  # H_max is the maximum of H
     return And(constraints)
 
 
-def timeout_handler(signum, frame):
-    raise Exception("Timeout")
+def timeout_handler():
+    interrupt_main()
 
 
 def sat_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-    # TODO: implement timeout
-
-    if solver != 'z3':
-        print(f'Solver {solver} not supported for SAT model.')
-        return None
 
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(time_limit)
@@ -279,19 +273,15 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
 
         if sym_break:
             # symmetry breaking constraint
-            # constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)))
-            # row(es, i) = M[:][:][i] flattened
             for i in range(m):
                 for j in range(m):
                     if i < j:
                         max_value = [Bool(f'max_value_{i}_{j}_{k}') for k in range(length)]
                         s.add(max_of(f'p_{i}_{j}', max_value, [loads[i], loads[j]], length=length))
                         for t in range(n):
-                            # s.add(Implies(And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value, length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
                             s.add(Implies(
                                 And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value,
                                                  length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
-                        # s.add(Implies(max_value <= min(l[i], l[j]), precedes(M[n][:][i], M[n][:][j])))
 
         # Building the H vector: a vector which contains the distance covered for each courier
         H = [[Bool(f'H_{i}_{k}') for i in range(length)] for k in range(m)]
@@ -311,7 +301,6 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         H_max = [Bool(f'H_max_{i}') for i in range(length)]
 
         # 8) H_max constraint: H_max is the maximum value of H.
-        # print(maximum(H))
         s.add(Or([And([H_max[j] == H[i][j] for j in range(length)]) for i in range(len(H))]))  # v is an element in x)
         for i in range(len(H)):
             s.add(greater_than(f'h_{i}', H_max, H[i], length=length))  # and it's the greatest
@@ -323,21 +312,12 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         s.add(greater_than('i', H_max, toBinary(lower_bound, length=length), length=length))
         s.add(greater_than('j', toBinary(upper_bound, length=length), H_max, length=length))
 
-        # symmetry breaking constraints
-        #  constraint forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
-
-        # timeout
-        # s.set("timeout", 150000)
-        print(s.check())
-
         optimal_solution = False
         while s.check() == sat:
             sol = s.model()
             intermediate_sol_found = True
             H_current = [sol.evaluate(H_max[j]) for j in range(length)]
-            print(s.check(), f'trial_number: {trial_number}, H_current: {toInt(H_current, length=length)}')
             s.add(strictly_greater_than(f'l_{trial_number}', H_current, H_max, length=length))
-            print(s.check())
             trial_number += 1
             if s.check() == sat:
                 sol = s.model()
@@ -348,7 +328,26 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
     elapsed_time = time.time() - start_time
-    path = toPath([[[sol.evaluate(M[i][j][k]) for k in range(m)] for j in range(n + 1)] for i in range(n + 1)])
+
+    x_dict = dict()
+    for i in range(n+1):
+        for j in range(n+1):
+            for k in range(m):
+                x_dict[(i, j, k)] = int(bool(sol.evaluate(M[i][j][k])))
+
+    full_path = []
+    for i in range(m):
+        path = [k for k, v in x_dict.items() if v == 1 and k[2] == i]
+        start = n
+        sub_path = []
+        while len(sub_path) < len(path) - 1:
+            next_step = list(filter(lambda e: e[0] == start, path))[0]
+            start = next_step[1]
+            sub_path.append(start + 1)
+        full_path.append(sub_path)
+
+    print(full_path)
+
     objective = toInt([sol.evaluate(H_max[i]) for i in range(length)], length=length)
 
     statistics = dict()
@@ -364,6 +363,6 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         statistics['optimal'] = False
 
     statistics['obj'] = objective
-    statistics['sol'] = path
+    statistics['sol'] = full_path
 
     return statistics

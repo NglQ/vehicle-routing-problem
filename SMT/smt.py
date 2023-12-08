@@ -1,21 +1,19 @@
 import time
 import signal
 
-from pysmt.shortcuts import Symbol, Solver, And, GE, LE, Plus, Equals, Int, Store, Select, Minus, Times, ExactlyOne, Max, Implies, Or, LT
+from pysmt.shortcuts import Symbol, Solver, And, GE, LE, Plus, Equals, Int, Store, Select, Minus, Times, ExactlyOne, Max, Implies, Or, LT, Min
 from pysmt.typing import INT, ArrayType
 
 from converter import convert
 import bounds_generator as bds_gen
+from _thread import interrupt_main
 
 
-def timeout_handler(signum, frame):
-    raise Exception("Timeout")
+def timeout_handler():
+    interrupt_main()
 
 
 def smt_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-    if sym_break:
-        print('Symmetry breaking constraints not implemented for SAT model yet.')
-        return None
 
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(time_limit)
@@ -116,8 +114,21 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
             s.add_assertion(LE(H_max, Int(int(up_bnd))))
 
             # __8__ symmetry breaking constraint
-            # forall(i in 1..M, j in 1..M where (i < j /\ max(u[i], u[j]) <= min(l[j], l[i])))(lex_lesseq(row(es, i), row(es, j)));
-
+            if sym_break:
+                for i in range(m):
+                    for j in range(m):
+                        if i < j:
+                            pass
+                            sum_i = Plus(
+                                [Times(Select(Select(y, Int(line)), Int(i)), Int(p[line])) for line in range(n)])
+                            sum_j = Plus(
+                                [Times(Select(Select(y, Int(line)), Int(j)), Int(p[line])) for line in range(n)])
+                            max_sum = Max(sum_i, sum_j)
+                            for t in range(n):
+                                s.add_assertion(Implies(And(max_sum <= Min(Int(l[i]), Int(l[j])),
+                                                            Equals(Select(Select(Select(x, Int(n)), Int(t)), Int(i)),
+                                                                   Int(1))), And([Equals(
+                                    Select(Select(Select(x, Int(n)), Int(o)), Int(i)), Int(0)) for o in range(t)])))
             s.push()
             optimal_solution = False
             res = s.solve()
@@ -134,30 +145,35 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                 # final_sol = s.get_model() if s.check_sat() else sol
             optimal_solution = True
     except:
+        print('exception')
         if not intermediate_sol_found:
+            # for k in range(m):
+            #     print('\n\n\n')
+            #     for i in range(N):
+            #         print('\n')
+            #         for j in range(N):
+            #             print(sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k))), end=' ')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
-        elapsed_time = time.time() - start_time
+    elapsed_time = time.time() - start_time
+    print('elapsed_time: '+str(elapsed_time))
 
-        # print(f'after:  {res}')
-        # print('X: \n')
-        #
-        # for k in range(m):
-        #     print('\n\n\n')
-        #     for i in range(N):
-        #         print('\n')
-        #         for j in range(N):
-        #             print(final_sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k))), end=' ')
-        # print('\nY: \n')
-        # for k in range(m):
-        #     print('\n\n\n')
-        #     for i in range(N):
-        #         print(final_sol.get_value(Select(Select(y, Int(i)), Int(k))), end=' ')
+    x_dict = dict()
+    for i in range(N):
+        for j in range(N):
+            for k in range(m):
+                x_dict[(i, j, k)] = int(str(sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k)))))
 
-        print('\nH: \n')
-        for k in range(m):
-            print(sol.get_value(Select(H, Int(k))), end=' ')
+    full_path = []
+    for i in range(m):
+        path = [k for k, v in x_dict.items() if v == 1 and k[2] == i]
+        start = n
+        sub_path = []
+        while len(sub_path) < len(path) - 1:
+            next_step = list(filter(lambda e: e[0] == start, path))[0]
+            start = next_step[1]
+            sub_path.append(start+1)
+        full_path.append(sub_path)
 
-        print(sol.get_value(H_max))
+    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': full_path}
 
-        return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': []}
