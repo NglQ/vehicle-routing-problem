@@ -14,6 +14,9 @@ def timeout_handler():
 
 
 def smt_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
+    if sym_break:
+        print('Symmetry breaking constraints not implemented for SAT model yet.')
+        return None
 
     signal.signal(signal.SIGALRM, timeout_handler)
     signal.alarm(time_limit)
@@ -145,35 +148,13 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                 # final_sol = s.get_model() if s.check_sat() else sol
             optimal_solution = True
     except:
-        print('exception')
         if not intermediate_sol_found:
-            # for k in range(m):
-            #     print('\n\n\n')
-            #     for i in range(N):
-            #         print('\n')
-            #         for j in range(N):
-            #             print(sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k))), end=' ')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
+
+        elapsed_time = time.time() - start_time
 
     elapsed_time = time.time() - start_time
     print('elapsed_time: '+str(elapsed_time))
 
-    x_dict = dict()
-    for i in range(N):
-        for j in range(N):
-            for k in range(m):
-                x_dict[(i, j, k)] = int(str(sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k)))))
 
-    full_path = []
-    for i in range(m):
-        path = [k for k, v in x_dict.items() if v == 1 and k[2] == i]
-        start = n
-        sub_path = []
-        while len(sub_path) < len(path) - 1:
-            next_step = list(filter(lambda e: e[0] == start, path))[0]
-            start = next_step[1]
-            sub_path.append(start+1)
-        full_path.append(sub_path)
-
-    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': full_path}
-
+    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': []}

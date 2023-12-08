@@ -15,7 +15,7 @@ models = {
     'CP': (cp_model, ['gecode', 'chuffed']),
     'SAT': (sat_model, ['z3']),
     'SMT': (smt_model, ['z3', 'msat']),
-    'MIP': (mip_model, ['cbc'])
+    'MIP': (mip_model, ['gurobi', 'xpress', 'copt'])
 }
 
 
@@ -39,7 +39,12 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 print(f'Solving {instance_file} - {model_name} model {temp_text1} symmetry breaking - {solver} ...')
                 stats_entry_name = solver + '_' + temp_text1 + '_symbreak'
 
-                stats = model_function(instance_file, instance, solver, time_limit, sym_break=sym_break_solve)
+                try:
+                    stats = model_function(instance_file, instance, solver, time_limit, sym_break=sym_break_solve)
+                except Exception as e:
+                    print(f'Solver stopped with error: {e}')
+                    stats = {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
+
                 if stats is None:
                     print(f'Solver not started. No solution found.')
                     continue

@@ -1,6 +1,7 @@
 import time
 import os
 
+import numpy as np
 from amplpy import AMPL, add_to_path
 
 from bounds_generator import generate_lowerbound, generate_upperbound
@@ -9,12 +10,10 @@ from converter import convert
 module_path = os.path.dirname(os.path.realpath(__file__))
 
 # TODO: add_to_path() is only useful to run the code from the local machine, not from the container
-add_to_path('/home/angelo/ampl.linux-intel64')
+add_to_path('/home/edo/ampl')
 
 
 def mip_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-	# TODO: email pacco!!!
-	# TODO: here "solved" means optimal???
 
 	# Calculate lower and upper bounds
 	m, n, l, p, d = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))
@@ -52,16 +51,26 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	ampl_solver.solve()
 	elapsed_time = time.time() - start_time
 
-	total_cost = ampl_solver.get_objective("cost_function").to_list()[0]  # get objective function
+	total_cost = ampl_solver.get_objective('cost_function').to_list()[0]  # get objective function
+	if total_cost == 0:
+		print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
+		return {'time': time_limit, 'optimal': False, 'obj': total_cost, 'sol': []}
 
-	x = ampl_solver.get_variable("x")  # get variables
-	n = ampl_solver.get_parameter("N").to_list()[0]
-	m = ampl_solver.get_parameter("K").to_list()[0]
+	x = ampl_solver.get_variable('x')  # get variables
+	n = ampl_solver.get_parameter('N').to_list()[0]
+	m = ampl_solver.get_parameter('K').to_list()[0]
 
 	x_dict = x.to_dict()
+
+	# X_np = np.zeros((n + 1, n + 1, m))
+	# for i in range(1, n + 2):
+	# 	for j in range(1, n + 2):
+	# 		for k in range(1, m + 1):
+	# 			X_np[i-1, j-1, k-1] = x_dict[(i, j, k)]
+
 	full_path = []
 	for i in range(1, m + 1):
-		path = [k for k, v in x_dict.items() if v > 0 and k[2] == i]
+		path = [k for k, v in x_dict.items() if np.allclose(v, 1) and k[2] == i]
 		start = n + 1
 		sub_path = []
 		while len(sub_path) < len(path) - 1:
@@ -73,8 +82,7 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	statistics = dict()
 	elapsed_time = int(elapsed_time)
 	statistics['time'] = elapsed_time
-	# TODO: here "solved" means optimal???
-	if ampl_solver.solve_result == "solved":
+	if ampl_solver.solve_result == 'solved':
 		if elapsed_time >= time_limit:
 			statistics['time'] = time_limit - 1
 		else:
