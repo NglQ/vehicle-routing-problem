@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import time
 
 print("Python version:", sys.version, '\n')
 module_path = os.path.dirname(os.path.realpath(__file__))
@@ -39,11 +40,13 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 print(f'Solving {instance_file} - {model_name} model {temp_text1} symmetry breaking - {solver} ...')
                 stats_entry_name = solver + '_' + temp_text1 + '_symbreak'
 
+                start_time = time.time()
                 try:
                     stats = model_function(instance_file, instance, solver, time_limit, sym_break=sym_break_solve)
                 except Exception as e:
                     print(f'Solver stopped with error: {e}')
                     stats = {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
+                elapsed_time = int(time.time() - start_time)
 
                 if stats is None:
                     print(f'Solver not started. No solution found.')
@@ -51,9 +54,9 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 if not sym_break_solve:
                     sym_break_solve, temp_text1 = True, 'with'
 
-                is_optimal, time = stats['optimal'], stats['time']
+                is_optimal = stats['optimal']
                 temp_text2 = 'was' if is_optimal else 'was not'
-                print(f'Solver stopped. An optimal solution {temp_text2} found after {time} seconds.')
+                print(f'Solver stopped. An optimal solution {temp_text2} found after {elapsed_time} seconds.')
 
                 statistics[stats_entry_name] = stats
 

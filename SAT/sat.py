@@ -178,9 +178,10 @@ def timeout_handler():
 
 def sat_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
 
-    alarm = thr.Timer(time_limit, timeout_handler)
+    alarm = thr.Timer(10, timeout_handler)
     alarm.start()
     intermediate_sol_found = False
+    stopped = False
     start_time = time.time()
 
     try:
@@ -313,25 +314,37 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         s.add(greater_than('i', H_max, toBinary(lower_bound, length=length), length=length))
         s.add(greater_than('j', toBinary(upper_bound, length=length), H_max, length=length))
 
+        print('Model built. Starting solver...')
+
         optimal_solution = False
         while s.check() == sat:
             sol = s.model()
             intermediate_sol_found = True
+            if time.time() - start_time <= time_limit:
+                before_time_limit_sol = sol
+
             H_current = [sol.evaluate(H_max[j]) for j in range(length)]
             s.add(strictly_greater_than(f'l_{trial_number}', H_current, H_max, length=length))
             trial_number += 1
             if s.check() == sat:
                 sol = s.model()
+                if time.time() - start_time <= time_limit:
+                    before_time_limit_sol = sol
             else:
                 optimal_solution = True
+                print('Optimal solution found.')
     except:
         alarm.cancel()
+        stopped = True
+        print('Timeout reached.')
         if not intermediate_sol_found:
             print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
     alarm.cancel()
     elapsed_time = time.time() - start_time
+    if stopped:
+        sol = before_time_limit_sol
 
     x_dict = dict()
     for i in range(n+1):
@@ -349,8 +362,6 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
             start = next_step[1]
             sub_path.append(start + 1)
         full_path.append(sub_path)
-
-    print(full_path)
 
     objective = toInt([sol.evaluate(H_max[i]) for i in range(length)], length=length)
 
