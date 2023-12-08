@@ -46,8 +46,8 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	else:
 		raise NotImplementedError(f'Solver {solver} not implemented.')
 
-	if solver in ['gurobi']:
-		ampl_solver.set_option(f'{solver}_options', f'Threads=15')
+	# if solver in ['gurobi']:
+	# 	ampl_solver.set_option(f'{solver}_options', f'Threads=15')
 
 	start_time = time.time()
 	ampl_solver.solve()
