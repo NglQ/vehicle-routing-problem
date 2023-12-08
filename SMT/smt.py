@@ -7,6 +7,7 @@ from pysmt.typing import INT, ArrayType
 from converter import convert
 import bounds_generator as bds_gen
 from _thread import interrupt_main
+import threading as thr
 
 
 def timeout_handler():
@@ -14,12 +15,9 @@ def timeout_handler():
 
 
 def smt_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-    if sym_break:
-        print('Symmetry breaking constraints not implemented for SAT model yet.')
-        return None
 
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(time_limit)
+    alarm = thr.Timer(time_limit, timeout_handler)
+    alarm.start()
     intermediate_sol_found = False
     start_time = time.time()
 
@@ -148,13 +146,14 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                 # final_sol = s.get_model() if s.check_sat() else sol
             optimal_solution = True
     except:
+        alarm.cancel()
         if not intermediate_sol_found:
+            print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
-        elapsed_time = time.time() - start_time
+    alarm.cancel()
 
     elapsed_time = time.time() - start_time
     print('elapsed_time: '+str(elapsed_time))
-
 
     return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': []}

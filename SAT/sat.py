@@ -1,6 +1,7 @@
 import time
 import signal
 from _thread import interrupt_main
+import threading as thr
 
 import numpy as np
 from z3 import *
@@ -177,8 +178,8 @@ def timeout_handler():
 
 def sat_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
 
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(time_limit)
+    alarm = thr.Timer(time_limit, timeout_handler)
+    alarm.start()
     intermediate_sol_found = False
     start_time = time.time()
 
@@ -324,10 +325,12 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
             else:
                 optimal_solution = True
     except:
+        alarm.cancel()
         if not intermediate_sol_found:
             print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
 
+    alarm.cancel()
     elapsed_time = time.time() - start_time
 
     x_dict = dict()
