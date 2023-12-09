@@ -217,7 +217,7 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
         for k in range(m):
             sum_w = [Bool(f'sum_w_{k}_{i}') for i in range(length)]
             sum_w_list = []
-            for i in range(n + 1):
+            for i in range(n):
                 sum_w_list_i = [Bool(f'sum_w_list_i_{k}{i}_{l}') for l in range(length)]
                 s.add(Implies(Y[i][k], And([sum_w_list_i[l] == toBinary(w[i], length=length)[l] for l in range(length)])))
                 s.add(Implies(Not(Y[i][k]), And([Not(sum_w_list_i[l]) for l in range(length)])))
