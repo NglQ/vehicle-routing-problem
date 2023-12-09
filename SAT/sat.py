@@ -158,8 +158,8 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
 
         # VARIABLES
 
-        X = [[[Bool(f"M_{i}_{j}_{k}") for k in range(m)] for j in range(n + 1)] for i in range(n + 1)]
-        Y = [[Bool(f"C_{i}_{k}") for k in range(m)] for i in range(n + 1)]
+        X = [[[Bool(f"X_{i}_{j}_{k}") for k in range(m)] for j in range(n + 1)] for i in range(n + 1)]
+        Y = [[Bool(f"Y_{i}_{k}") for k in range(m)] for i in range(n + 1)]
         U = [[Bool(f"U_{i}_{j}") for j in range(length)] for i in range(n + 1)]
         H_max = [Bool(f'H_max_{i}') for i in range(length)]
 
@@ -255,7 +255,7 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
                         for t in range(n):
                             s.add(Implies(
                                 And(greater_than(f'q_{i}_{j}_{t}', toBinary(min(l[i], l[j]), length=length), max_value,
-                                                 length=length), M[n][t][i]), And([Not(M[n][o][j]) for o in range(t)])))
+                                                 length=length), X[n][t][i]), And([Not(X[n][o][j]) for o in range(t)])))
 
         print('Model built. Starting solver...')
 
@@ -293,7 +293,7 @@ def sat_model(instance_file: str, instance_number: str, solver: str, time_limit:
     for i in range(n+1):
         for j in range(n+1):
             for k in range(m):
-                x_dict[(i, j, k)] = int(bool(sol.evaluate(M[i][j][k])))
+                x_dict[(i, j, k)] = int(bool(sol.evaluate(X[i][j][k])))
 
     full_path = []
     for i in range(m):
