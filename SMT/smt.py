@@ -156,4 +156,28 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
     elapsed_time = time.time() - start_time
     print('elapsed_time: '+str(elapsed_time))
 
-    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': 0, 'sol': []}
+    objective = sol.get_value(H_max)
+
+
+    x_dict = dict()
+    for i in range(N):
+        for j in range(N):
+            for k in range(m):
+                x_dict[(i, j, k)] = int(str(sol.get_value(Select(Select(Select(x, Int(i)), Int(j)), Int(k)))))
+
+    full_path = []
+    for i in range(m):
+        path = [k for k, v in x_dict.items() if v == 1 and k[2] == i]
+        start = n
+        sub_path = []
+        while len(sub_path) < len(path) - 1:
+            next_step = list(filter(lambda e: e[0] == start, path))[0]
+            start = next_step[1]
+            sub_path.append(start+1)
+        full_path.append(sub_path)
+
+    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': objective, 'sol': full_path}
+
+
+if __name__ == '__main__':
+    print(smt_model('../instances/inst03.dat', '03', 'z3', 300, False))
