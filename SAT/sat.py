@@ -178,7 +178,7 @@ def timeout_handler():
 
 def sat_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
 
-    alarm = thr.Timer(10, timeout_handler)
+    alarm = thr.Timer(time_limit, timeout_handler)
     alarm.start()
     intermediate_sol_found = False
     stopped = False

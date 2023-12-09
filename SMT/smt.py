@@ -19,6 +19,7 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
     alarm = thr.Timer(time_limit, timeout_handler)
     alarm.start()
     intermediate_sol_found = False
+    stopped = False
     start_time = time.time()
 
     try:
@@ -131,13 +132,19 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                                                                    Int(1))), And([Equals(
                                     Select(Select(Select(x, Int(n)), Int(o)), Int(i)), Int(0)) for o in range(t)])))
             s.push()
+
+            print('Model built. Starting solver...')
+
             optimal_solution = False
             res = s.solve()
             intermediate_sol_found = True
 
-            print(s.check_sat())
+            # print(s.check_sat())
             while s.check_sat():
                 sol = s.get_model()
+                if time.time() - start_time <= time_limit:
+                    before_time_limit_sol = sol
+
                 H_current = s.get_value(H_max)
                 s.add_assertion(LT(H_max, H_current))
                 s.push()
@@ -145,8 +152,11 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                     s.solve()
                 # final_sol = s.get_model() if s.check_sat() else sol
             optimal_solution = True
+            print('Optimal solution found.')
     except:
         alarm.cancel()
+        stopped = True
+        print('Timeout reached.')
         if not intermediate_sol_found:
             print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
@@ -154,10 +164,10 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
     alarm.cancel()
 
     elapsed_time = time.time() - start_time
-    print('elapsed_time: '+str(elapsed_time))
+    if stopped:
+        sol = before_time_limit_sol
 
-    objective = sol.get_value(H_max)
-
+    objective = sol.get_value(H_max)._content.payload
 
     x_dict = dict()
     for i in range(N):
@@ -176,8 +186,19 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
             sub_path.append(start+1)
         full_path.append(sub_path)
 
-    return {'time': elapsed_time, 'optimal': optimal_solution, 'obj': objective, 'sol': full_path}
+    statistics = dict()
+    elapsed_time = int(elapsed_time)
+    if optimal_solution:
+        if elapsed_time >= time_limit:
+            statistics['time'] = time_limit - 1
+        else:
+            statistics['time'] = elapsed_time
+        statistics['optimal'] = True
+    else:
+        statistics['time'] = time_limit
+        statistics['optimal'] = False
 
+    statistics['obj'] = objective
+    statistics['sol'] = full_path
 
-if __name__ == '__main__':
-    print(smt_model('../instances/inst03.dat', '03', 'z3', 300, False))
+    return statistics
