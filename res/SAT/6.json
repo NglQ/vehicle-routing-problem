@@ -1,0 +1,1 @@
+{"z3_without_symbreak": {"time": 4, "optimal": true, "obj": 322, "sol": [[3, 2], [8], [6, 4], [5], [1], [7]]}, "z3_with_symbreak": {"time": 5, "optimal": true, "obj": 322, "sol": [[3], [7, 6], [2], [4], [5], [8, 1]]}}

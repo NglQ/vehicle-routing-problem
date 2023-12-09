@@ -1,0 +1,291 @@
+[edo@rog-g513rs CDMO-project]$ docker exec -it cdmo-container /bin/bash
+Python version: 3.11.6 (main, Oct 23 2023, 22:48:54) [GCC 11.4.0]
+
+Minizinc Python API version: 0.9.0
+
+
+CDMO-project (Bellatreccia, Fusa, Quarta)
+
+TODO: write info text
+
+Make a choice:
+1. Run a single instance on a single model
+2. Run multiple instances on a single model
+3. Run all instances on all models
+
+Choice (1, 2 or 3): 3
+Solving /cdmo/instances/inst01.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 0 seconds.
+Solving /cdmo/instances/inst01.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 0 seconds.
+Solving /cdmo/instances/inst02.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 14 seconds.
+Solving /cdmo/instances/inst02.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 14 seconds.
+Solving /cdmo/instances/inst03.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 1 seconds.
+Solving /cdmo/instances/inst03.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 1 seconds.
+Solving /cdmo/instances/inst04.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 8 seconds.
+Solving /cdmo/instances/inst04.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 10 seconds.
+Solving /cdmo/instances/inst05.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 0 seconds.
+Solving /cdmo/instances/inst05.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 0 seconds.
+Solving /cdmo/instances/inst06.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 4 seconds.
+Solving /cdmo/instances/inst06.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 5 seconds.
+Solving /cdmo/instances/inst07.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Timeout reached.
+Solver stopped. An optimal solution was not found after 500 seconds.
+Solving /cdmo/instances/inst07.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Timeout reached.
+Solver stopped. An optimal solution was not found after 470 seconds.
+Solving /cdmo/instances/inst08.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 10 seconds.
+Solving /cdmo/instances/inst08.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 12 seconds.
+Solving /cdmo/instances/inst09.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 24 seconds.
+Solving /cdmo/instances/inst09.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 25 seconds.
+Solving /cdmo/instances/inst10.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 22 seconds.
+Solving /cdmo/instances/inst10.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+Optimal solution found.
+Solver stopped. An optimal solution was found after 24 seconds.
+Solving /cdmo/instances/inst11.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 11 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst11.dat - SAT model with symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 11 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 300 seconds.
+
+-------------------------------------------------------------------------------------------
+
+Solving /cdmo/instances/inst12.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 12 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst12.dat - SAT model with symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 12 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst13.dat - SAT model without symmetry breaking - z3 ...
+Model built. Starting solver...
+Timeout reached.
+No solution found for instance 13 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 581 seconds.
+Solving /cdmo/instances/inst13.dat - SAT model with symmetry breaking - z3 ...
+Model built. Starting solver...
+^CTimeout reached.
+Solver stopped. An optimal solution was not found after 2784 seconds.
+Solving /cdmo/instances/inst14.dat - SAT model without symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+                               ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 514, in as_ast
+    return Z3_sort_to_ast(self.ctx_ref(), self.ast)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 2508, in Z3_sort_to_ast
+    r = _elems.f(a0, a1)
+        ^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 14 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 2212 seconds.
+Solving /cdmo/instances/inst14.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1426, in Z3_dec_ref
+    _elems.Check(a0)
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1379, in Check
+    err = self.get_error_code(ctx)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 14 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 382 seconds.
+Solving /cdmo/instances/inst15.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 15 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst15.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1426, in Z3_dec_ref
+    _elems.Check(a0)
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1379, in Check
+    err = self.get_error_code(ctx)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
+^CException ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 312, in __del__
+    def __del__(self):
+
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 15 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 335 seconds.
+Solving /cdmo/instances/inst16.dat - SAT model without symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1425, in Z3_dec_ref
+    _elems.f(a0, a1)
+KeyboardInterrupt:
+Model built. Starting solver...
+Solver stopped with error: cannot access local variable 'sol' where it is not associated with a value
+Solver stopped. An optimal solution was not found after 456 seconds.
+Solving /cdmo/instances/inst16.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1426, in Z3_dec_ref
+    _elems.Check(a0)
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1379, in Check
+    err = self.get_error_code(ctx)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 16 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 309 seconds.
+Solving /cdmo/instances/inst17.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 17 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 301 seconds.
+Solving /cdmo/instances/inst17.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1425, in Z3_dec_ref
+    _elems.f(a0, a1)
+KeyboardInterrupt:
+^CException ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 312, in __del__
+    def __del__(self):
+
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 17 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 1385 seconds.
+Solving /cdmo/instances/inst18.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 18 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst18.dat - SAT model with symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 18 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst19.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 19 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst19.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+                               ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 514, in as_ast
+    return Z3_sort_to_ast(self.ctx_ref(), self.ast)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 2509, in Z3_sort_to_ast
+    _elems.Check(a0)
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1379, in Check
+    err = self.get_error_code(ctx)
+          ^^^^^^^^^^^^^^^^^^^^^^^^
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 19 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 827 seconds.
+Solving /cdmo/instances/inst20.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 20 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 301 seconds.
+Solving /cdmo/instances/inst20.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1425, in Z3_dec_ref
+    _elems.f(a0, a1)
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 20 with solver z3 with sym_break = True.
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 313, in __del__
+    if self.ctx.ref() is not None and self.ast is not None:
+       ^^^^^^^^
+AttributeError: 'BoolSortRef' object has no attribute 'ctx'
+Solver stopped. An optimal solution was not found after 651 seconds.
+Solving /cdmo/instances/inst21.dat - SAT model without symmetry breaking - z3 ...
+Timeout reached.
+No solution found for instance 21 with solver z3 with sym_break = False.
+Solver stopped. An optimal solution was not found after 300 seconds.
+Solving /cdmo/instances/inst21.dat - SAT model with symmetry breaking - z3 ...
+Exception ignored in: <function AstRef.__del__ at 0x7f3dc5551bc0>
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3.py", line 314, in __del__
+    Z3_dec_ref(self.ctx.ref(), self.as_ast())
+  File "/usr/local/lib/python3.11/dist-packages/z3/z3core.py", line 1425, in Z3_dec_ref
+    _elems.f(a0, a1)
+KeyboardInterrupt:
+^CTimeout reached.
+No solution found for instance 21 with solver z3 with sym_break = True.
+Solver stopped. An optimal solution was not found after 1313 seconds.
+root@a8fd3e02e161:/cdmo#
