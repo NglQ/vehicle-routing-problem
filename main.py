@@ -51,6 +51,7 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 if stats is None:
                     print(f'Solver not started. No solution found.')
                     continue
+                print(stats)
                 if not sym_break_solve:
                     sym_break_solve, temp_text1 = True, 'with'
 
@@ -69,10 +70,8 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
 if __name__ == '__main__':
     generate_instances()
 
-    # TODO: write some info text about how to use the program
     info_text = \
         "\nCDMO-project (Bellatreccia, Fusa, Quarta)\n\n" \
-        "TODO: write info text\n\n" \
         "Make a choice:\n" \
         "1. Run a single instance on a single model\n" \
         "2. Run multiple instances on a single model\n" \
