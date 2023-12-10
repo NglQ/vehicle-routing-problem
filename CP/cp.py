@@ -14,7 +14,6 @@ module_path = os.path.dirname(os.path.realpath(__file__))
 
 
 def cp_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
-    # TODO: Check what happens to the `result` variable when no intermediate solutions is found
 
     # Calculate lower and upper bounds
     m, n, l, p, d = convert(os.path.join(module_path, f'./../instances/inst{instance_number}.dat'))

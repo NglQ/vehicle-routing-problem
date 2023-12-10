@@ -9,8 +9,8 @@ from converter import convert
 
 module_path = os.path.dirname(os.path.realpath(__file__))
 
-# TODO: add_to_path() is only useful to run the code from the local machine, not from the container
-add_to_path('/home/edo/ampl')
+# INFO: add_to_path() is only useful to run the code from the local machine, not from the container
+# add_to_path('/home/edo/ampl')
 
 
 def mip_model(instance_file: str, instance_number: str, solver: str, time_limit: int, sym_break: bool) -> dict:
@@ -21,28 +21,28 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	ub = generate_upperbound(n, m, d)
 
 	ampl_solver = AMPL()
-	ampl_solver.eval(f"reset data;")
+	ampl_solver.eval(f'reset data;')
 
-	ampl_solver.set_option("gentimes", 0)
-	ampl_solver.set_option("times", 0)
+	ampl_solver.set_option('gentimes', 0)
+	ampl_solver.set_option('times', 0)
 
 	ampl_solver.read(os.path.join(module_path, "mip.mod"))
 	if sym_break:
 		ampl_solver.eval(
-			"s.t. sym_break {k in COURIERS, m in COURIERS, j in NODES: k<m}: max(sum{i in NODES} y[i,k]*L[i], "
-			"sum{i in NODES} y[i,m]*L[i]) <= min(C[k], C[m]) ==> ((x[N+1, j, k] == 1) ==> sum{l in {1..j}} x[N+1, l, m] == 0);"
+			's.t. sym_break {k in COURIERS, m in COURIERS, j in NODES: k<m}: max(sum{i in NODES} y[i,k]*L[i], '
+			'sum{i in NODES} y[i,m]*L[i]) <= min(C[k], C[m]) ==> ((x[N+1, j, k] == 1) ==> sum{l in {1..j}} x[N+1, l, m] == 0);'
 		)
-	ampl_solver.eval("s.t. lower_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] >="+str(lb)+";")
-	ampl_solver.eval("s.t. upper_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] <="+str(ub)+";")
+	ampl_solver.eval('s.t. lower_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] >='+str(lb)+';')
+	ampl_solver.eval('s.t. upper_bound: max{k in COURIERS} sum {i in NODES_1, j in NODES_1} D[i,j]*x[i,j,k] <='+str(ub)+';')
 
 	ampl_solver.read_data(instance_file)
-	ampl_solver.set_option("solver", solver)
+	ampl_solver.set_option('solver', solver)
 
 	# Each solver has its own way to set time limit example:
 	# ampl_solver.set_option('highs_options', f'time_limit={1}')
-	if solver == 'highs':
+	if solver in ['highs']:
 		ampl_solver.set_option(f'{solver}_options', f'time_limit={time_limit}')
-	elif solver in ['gurobi', 'cbc']:
+	elif solver in ['gurobi', 'cbc', 'xpress', 'copt', 'mosek']:
 		ampl_solver.set_option(f'{solver}_options', f'TimeLimit={time_limit}')
 	else:
 		raise NotImplementedError(f'Solver {solver} not implemented.')
@@ -61,12 +61,6 @@ def mip_model(instance_file: str, instance_number: str, solver: str, time_limit:
 	m = ampl_solver.get_parameter('K').to_list()[0]
 
 	x_dict = x.to_dict()
-
-	# X_np = np.zeros((n + 1, n + 1, m))
-	# for i in range(1, n + 2):
-	# 	for j in range(1, n + 2):
-	# 		for k in range(1, m + 1):
-	# 			X_np[i-1, j-1, k-1] = x_dict[(i, j, k)]
 
 	full_path = []
 	for i in range(1, m + 1):
