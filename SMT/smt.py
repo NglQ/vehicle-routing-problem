@@ -1,12 +1,10 @@
 import time
-import signal
 
 from pysmt.shortcuts import Symbol, Solver, And, GE, LE, Plus, Equals, Int, Store, Select, Minus, Times, ExactlyOne, Max, Implies, Or, LT, Min
 from pysmt.typing import INT, ArrayType
 
 from converter import convert
 import bounds_generator as bds_gen
-import threading as thr
 
 from timeout import stopped, timeout_handler, check_timeout
 
@@ -32,10 +30,6 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
         H_max = Symbol('H_max', INT)
 
         with Solver(name=solver) as s:
-            if solver == 'z3':
-                # s.z3.set('timeout', 10000)
-                pass
-
             for k in range(m):
                 sum_distances = Int(0)
                 for i in range(N):
@@ -163,11 +157,6 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
 
             if check_timeout(time_limit):
                 return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
-            # else:
-            #     remaining_time = int(time_limit - (time.time() - start_time))
-            #     print(f'Starting solver with {remaining_time} seconds left.')
-            #     alarm = thr.Timer(remaining_time, timeout_handler)
-            #     alarm.start()
 
             print('Model built. Starting solver...')
 
@@ -194,20 +183,16 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
                     s.solve()
                     if check_timeout(time_limit):
                         raise Exception
-                # final_sol = s.get_model() if s.check_sat() else sol
             optimal_solution = True
             print('Optimal solution found.')
     except Exception as e:
         # Print with traceback
         print(e)
-        #alarm.cancel()
         stopped[stopped_key] = (True, start_time)
         print('Timeout reached.')
         if not intermediate_sol_found:
             print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
-
-    #alarm.cancel()
 
     elapsed_time = time.time() - start_time
     if stopped[stopped_key][0]:

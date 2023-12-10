@@ -51,7 +51,7 @@ def solve_instances(model_function: callable, instances: list[str], solvers: lis
                 if stats is None:
                     print(f'Solver not started. No solution found.')
                     continue
-                print(stats)
+                print('JSON:', stats)
                 if not sym_break_solve:
                     sym_break_solve, temp_text1 = True, 'with'
 
