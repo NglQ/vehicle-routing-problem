@@ -5,6 +5,7 @@ from pysmt.typing import INT, ArrayType
 
 from converter import convert
 import bounds_generator as bds_gen
+import threading as thr
 
 from timeout import stopped, timeout_handler, check_timeout
 
@@ -157,6 +158,11 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
 
             if check_timeout(time_limit):
                 return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
+            else:
+                remaining_time = int(time_limit - (time.time() - start_time))
+                print(f'Starting solver with {remaining_time} seconds left.')
+                alarm = thr.Timer(remaining_time, timeout_handler)
+                alarm.start()
 
             print('Model built. Starting solver...')
 
@@ -186,6 +192,7 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
             optimal_solution = True
             print('Optimal solution found.')
     except Exception as e:
+        alarm.cancel()
         # Print with traceback
         print(e)
         stopped[stopped_key] = (True, start_time)
@@ -193,6 +200,8 @@ def smt_model(instance_file: str, instance_number: str, solver: str, time_limit:
         if not intermediate_sol_found:
             print(f'No solution found for instance {instance_number} with solver {solver} with sym_break = {sym_break}.')
             return {'time': time_limit, 'optimal': False, 'obj': 0, 'sol': []}
+
+    alarm.cancel()
 
     elapsed_time = time.time() - start_time
     if stopped[stopped_key][0]:
