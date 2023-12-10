@@ -1,5 +1,11 @@
 # CDMO-project
 
+Bellatreccia Chiara, chiara.bellatreccia@studio.unibo.it
+
+Fusa Edoardo, edoardo.fusa@studio.unibo.it
+
+Quarta Angelo, angelo.quarta@studio.unibo.it
+
 ## Project installation
 To build the docker image, run the following command in the root directory of the project:
 ```
